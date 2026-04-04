@@ -38,6 +38,10 @@ class FlashcardService {
         throw new Error('Not implemented');
     }
 
+    async updateProgress() {
+        throw new Error('Not implemented');
+    }
+
     async delete() {
         throw new Error('Not implemented');
     }

@@ -1,49 +1,52 @@
-import Flashcard from '../models/Flashcard';
+import Flashcard, { FlashcardCreationAttributes, FlashcardUpdateAttributes } from '../models/Flashcard';
+import UserFlashcardProgress, { UserFlashcardProgressCreationAttributes, UserFlashcardProgressUpdateAttributes } from '../models/UserFlashcardProgress';
 
-// Data access for Flashcard model
+// Data access for Flashcard and UserFlashcardProgress models
 // Called by: FlashcardService
-// FR-31: create; 
-// FR-08: update; 
-// FR-03: duplicate; 
-// FR-11: flag; 
+// FR-31: create;
+// FR-08: update;
+// FR-03: duplicate;
+// FR-11: flag;`
 // FR-02: search by keyword
 
 class FlashcardRepository {
     // TODO: implement each method
 
-    async findAllByCollection(): Promise<Flashcard[]> {
+    async findAllFlashcardsByCollection(collectionID: number): Promise<Flashcard[]> {
         throw new Error('Not implemented');
     }
 
-    async findFlaggedByCollection(): Promise<Flashcard[]> {
+    // isFlaggedDifficult is per-user (UserFlashcardProgress), so userID is required
+    async findFlaggedByUserAndCollectionn(userID: number, collectionID: number): Promise<Flashcard[]> {
         throw new Error('Not implemented');
     }
 
-    async searchByKeyword(): Promise<Flashcard[]> {
+    async searchFlashcardsByKeyword(collectionID: number, keyword: string): Promise<Flashcard[]> {
         throw new Error('Not implemented');
     }
 
-    async findById(): Promise<Flashcard | null> {
+    async findFlashcardById(id: number): Promise<Flashcard | null> {
         throw new Error('Not implemented');
     }
 
-    async create(): Promise<Flashcard> {
-        throw new Error('Not implemented');
-    }
-    // data: Partial<Pick<Flashcard, 'field| field2'>> to allow updating only certain fields
-    async update(): Promise<void> {
+    async createFlashcard(data: FlashcardCreationAttributes): Promise<Flashcard> {
         throw new Error('Not implemented');
     }
 
-    async incrementCorrect(): Promise<void> {
+    async updateFlashcard(id: number, data: FlashcardUpdateAttributes): Promise<void> {
         throw new Error('Not implemented');
     }
 
-    async incrementIncorrect(): Promise<void> {
+    // Creates initial UserFlashcardProgress row when a user first encounters a flashcard
+    async createFlashcardProgress(data: UserFlashcardProgressCreationAttributes): Promise<UserFlashcardProgress> {
         throw new Error('Not implemented');
     }
 
-    async deleteById(): Promise<void> {
+    async updateFlashcardProgress(userID: number, flashcardID: number, data: UserFlashcardProgressUpdateAttributes): Promise<void> {
+        throw new Error('Not implemented');
+    }
+
+    async deleteFlashcardById(id: number): Promise<void> {
         throw new Error('Not implemented');
     }
 }

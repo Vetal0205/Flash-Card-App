@@ -1,3 +1,5 @@
+import { Collection } from '../models';
+import { CollectionCreationAttributes } from '../models/Collection';
 import CollectionRepository from '../repositories/CollectionRepository';
 import { Express } from 'express';
 
@@ -14,11 +16,13 @@ import { Express } from 'express';
 // FR-23: validate file content format 
 
 class CollectionService {
-    async getAllByUser(userId: number) {
+    async getAllCollectionsByUser() {
         throw new Error('Not implemented');
     }
 
-    async create() {
+    async create(data: CollectionCreationAttributes): Promise<Collection> {
+        // 1. Call repo.createCollection(data)
+        // 2. Return created collection
         throw new Error('Not implemented');
     }
 
@@ -26,7 +30,14 @@ class CollectionService {
         throw new Error('Not implemented');
     }
 
-    async delete() {
+    async update() {
+        throw new Error('Not implemented');
+    }
+
+    async delete(userID: number, collectionID: number): Promise<void> {
+        // 1. Call repo.findCollectionById(collectionID), throw 404 if not found
+        // 2. Verify collection.userID === userID, throw 403 if not owner
+        // 3. Call repo.deleteCollectionById(collectionID) — cascades to Flashcard, StudySession
         throw new Error('Not implemented');
     }
 
