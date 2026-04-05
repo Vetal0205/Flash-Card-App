@@ -8,6 +8,7 @@
         "esModuleInterop": true,
         "strict": true,
         "baseUrl": ".",
+        "types": ["Multer", "jest"],
         "skipLibCheck": true,
         "resolveJsonModule": true,
         "forceConsistentCasingInFileNames": true,
