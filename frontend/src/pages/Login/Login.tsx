@@ -1,3 +1,9 @@
+//Halema Diab 
+//Frontend code for UC1- User Login With Optional "Remember Me"
+//maps to FR-25, FR-26, FR-27, FR-28, FR-29, FR-30, NFR-08, NFR-10
+// //This page allows the user to log in, and to stay logged in, or take them to sign up
+ 
+
 import { useNavigate } from 'react-router-dom';
 
 function Login() {

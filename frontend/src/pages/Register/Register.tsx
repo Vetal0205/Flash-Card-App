@@ -1,3 +1,8 @@
+//Halema Diab
+//frontend code for UC2- New User Sign-Up
+//maps to FR-25, FR-26, FR-27, FR-28, FR-29, NFR-10
+//This page allows users to create a new account 
+
 import { useNavigate } from 'react-router-dom';
 
 function Register() {
