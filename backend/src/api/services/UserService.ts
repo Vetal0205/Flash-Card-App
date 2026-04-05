@@ -1,4 +1,6 @@
 import UserRepository from '../repositories/UserRepository';
+import { UserOutput } from '../models/User';
+import ServiceError from './ServiceError';
 
 // Business logic for user profile management
 // FR-06 (Use Case 6): edit profile (name, email, password)
@@ -22,8 +24,17 @@ class UserService {
         throw new Error('Not implemented');
     }
 
-    async deleteAccount() {
-        throw new Error('Not implemented');
+    // (Qays) deletes account if account exists
+    async deleteAccount(userID: number): Promise<UserOutput> {
+        const user = await UserRepository.findUserById(userID);
+
+        if (!user) {
+            throw new ServiceError(404, 'User not found.');
+        }
+
+        await UserRepository.deleteUserById(userID);
+
+        return user;
     }
 }
 

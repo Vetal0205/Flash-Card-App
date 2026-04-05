@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import UserController from '../../controllers/UserController';
+import AuthMiddleware from '../../middlewares/AuthMiddleware';
 
 
 const router: Router = Router();
-// All routes require authentication TBD
+router.use(AuthMiddleware.requireAuth.bind(AuthMiddleware));
 
 
 // UC-6: GET /api/v1/users/me

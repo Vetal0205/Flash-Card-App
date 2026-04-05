@@ -2,6 +2,7 @@ import { Collection } from '../models';
 import { CollectionCreationAttributes } from '../models/Collection';
 import CollectionRepository from '../repositories/CollectionRepository';
 import { Express } from 'express';
+import ServiceError from './ServiceError';
 
 // Business logic for flashcard collections
 // FR-01 (Use Case 10): import from file;
@@ -41,8 +42,37 @@ class CollectionService {
         throw new Error('Not implemented');
     }
 
-    async share() {
-        throw new Error('Not implemented');
+    // (Qays) updates collection to be public so that it's shareable
+    async share(userID: number, collectionID: number): Promise<{ collection: Collection; alreadyShared: boolean }> {
+        const collection = await CollectionRepository.findCollectionById(collectionID);
+
+        if (!collection) {
+            throw new ServiceError(404, 'Collection not found.');
+        }
+
+        if (collection.userID !== userID) {
+            throw new ServiceError(403, 'You can only share collections you own.');
+        }
+
+        if (collection.visibility === 'public') {
+            return {
+                collection,
+                alreadyShared: true,
+            };
+        }
+
+        await CollectionRepository.updateCollection(collectionID, { visibility: 'public' });
+
+        const updatedCollection = await CollectionRepository.findCollectionById(collectionID);
+
+        if (!updatedCollection) {
+            throw new ServiceError(500, 'Collection was updated but could not be reloaded.');
+        }
+
+        return {
+            collection: updatedCollection,
+            alreadyShared: false,
+        };
     }
 
     async importFromFile(file: Express.Multer.File) {

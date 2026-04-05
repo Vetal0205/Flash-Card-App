@@ -15,7 +15,7 @@ class CollectionRepository {
     }
 
     async findCollectionById(id: number): Promise<Collection | null> {
-        throw new Error('Not implemented');
+        return Collection.findByPk(id);
     }
 
     async createCollection(data: CollectionCreationAttributes): Promise<Collection> {
@@ -23,7 +23,11 @@ class CollectionRepository {
     }
 
     async updateCollection(id: number, data: CollectionUpdateAttributes): Promise<void> {
-        throw new Error('Not implemented');
+        await Collection.update(data, {
+            where: {
+                collectionID: id,
+            },
+        });
     }
 
     async deleteCollectionById(id: number): Promise<void> {

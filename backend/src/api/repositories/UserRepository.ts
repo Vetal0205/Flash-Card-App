@@ -9,8 +9,22 @@ import { UserSettingsPreferencesUpdateAttributes } from '../models/UserSettingsP
 class UserRepository {
     // TODO: implement each method
 
+    // (Qays) retrieves relevant user attributes based on userID 
     async findUserById(id: number): Promise<UserOutput | null> {
-        throw new Error('Not implemented');
+        const user = await User.findByPk(id, {
+            attributes: ['userID', 'username', 'email', 'createdAt'],
+        });
+
+        if (!user) {
+            return null;
+        }
+
+        return {
+            userID: user.userID,
+            username: user.username,
+            email: user.email,
+            createdAt: user.createdAt,
+        };
     }
 
     // Returns full User (including passwordHash) for auth credential verification
@@ -26,9 +40,13 @@ class UserRepository {
         throw new Error('Not implemented');
     }
 
-    // FR-09: delete account
+    // (Qays) FR-09: delete account
     async deleteUserById(id: number): Promise<void> {
-        throw new Error('Not implemented');
+        await User.destroy({
+            where: {
+                userID: id,
+            },
+        });
     }
 
     // Covers failedLoginAttempts, lockoutUntil, lastActivityAt
