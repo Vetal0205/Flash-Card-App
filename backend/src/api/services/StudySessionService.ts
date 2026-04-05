@@ -39,6 +39,10 @@ class StudySessionService {
         throw new Error('Not implemented');
     }
 
+    async update() {
+        throw new Error('Not implemented');
+    }
+
     async getSummary() {
         throw new Error('Not implemented');
     }

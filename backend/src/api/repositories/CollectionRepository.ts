@@ -1,32 +1,32 @@
-import Collection from '../models/Collection';
+import Collection, { CollectionCreationAttributes, CollectionUpdateAttributes } from '../models/Collection';
 
 // Data access for Collection model
 // Called by: CollectionService
 // FR-12: create; 
 // FR-13: delete; 
-// FR-18: rename; 
+// FR-18:  update (rename, change visibility, etc.);
 // FR-07: list all
 
 class CollectionRepository {
     // TODO: implement each method
 
-    async findAllByUser(): Promise<Collection[]> {
+    async findAllCollectionsByUser(userID: number): Promise<Collection[]> {
         throw new Error('Not implemented');
     }
 
-    async findById(): Promise<Collection | null> {
+    async findCollectionById(id: number): Promise<Collection | null> {
         throw new Error('Not implemented');
     }
 
-    async create(): Promise<Collection> {
+    async createCollection(data: CollectionCreationAttributes): Promise<Collection> {
         throw new Error('Not implemented');
     }
 
-    async rename(): Promise<void> {
+    async updateCollection(id: number, data: CollectionUpdateAttributes): Promise<void> {
         throw new Error('Not implemented');
     }
 
-    async deleteById(): Promise<void> {
+    async deleteCollectionById(id: number): Promise<void> {
         throw new Error('Not implemented');
     }
 }
