@@ -4,7 +4,7 @@
  * These are specification (TDD) tests: they define the expected contract
  * for the PDF export feature. They will fail with "Not implemented" until
  * the service is fully implemented, at which point all should pass.
- * Author: Vitalii Belsiubniak
+ *
  */
 
 // Mocks (must appear before the module under test is imported)

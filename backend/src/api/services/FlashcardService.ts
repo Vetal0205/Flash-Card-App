@@ -21,6 +21,10 @@ class FlashcardService {
         throw new Error('Not implemented');
     }
 
+    async getAllByCollection() {
+        throw new Error('Not implemented');
+    }
+
     async getAllByCollection(collectionID: number): Promise<Flashcard[]> {
         throw new Error('Not implemented');
     }

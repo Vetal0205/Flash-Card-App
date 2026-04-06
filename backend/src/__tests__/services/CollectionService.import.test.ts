@@ -6,6 +6,12 @@
  * the service is fully implemented, at which point all should pass.
  *
  * Author: Vitalii Belsiubniak
+ * TC-UC10-F-007 (auth / HTTP 401) is enforced entirely by Express middleware
+ * before the controller is reached — it is not testable at the service level
+ * and is marked todo for an integration test suite.
+ *
+ * TC-UC10-NF-002 (keyboard accessibility) and TC-UC10-NF-003 (cross-browser)
+ * are frontend/E2E concerns that require Playwright or Cypress — also todo.
  */
 
 import { Readable } from 'stream';
