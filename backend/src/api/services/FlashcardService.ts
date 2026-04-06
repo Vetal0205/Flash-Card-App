@@ -10,6 +10,15 @@ import CollectionRepository from '../repositories/CollectionRepository';
 // FR-06: flip (handled client-side, data served here)
 
 class FlashcardService {
+    async createBulk(
+        collectionId: number,
+        cards: Array<{ question: string; answer: string }>
+    ): Promise<number> {
+        // 1. For each card call FlashcardRepository.createFlashcard({ collectionID: collectionId, question, answer })
+        // 2. Return the count of successfully created flashcards
+        throw new Error('Not implemented');
+    }
+
     async getAllByCollection() {
         throw new Error('Not implemented');
     }
