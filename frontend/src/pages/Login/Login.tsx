@@ -1,55 +1,13 @@
-import { FormEvent, useState, type CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { loginRequest } from '../../services/authApi';
-import {
-  clearLoginFailuresAndLockout,
-  isAccountLocked,
-  LOCKOUT_MESSAGE,
-  recordLoginFailure,
-} from '../../services/loginLockout';
+//Halema Diab 
+//Frontend code for UC1- User Login With Optional "Remember Me"
+//maps to FR-25, FR-26, FR-27, FR-28, FR-29, FR-30, NFR-08, NFR-10
+// //This page allows the user to log in, and to stay logged in, or take them to sign up
+ 
 
-const AUTH_ERROR = 'Could not authenticate';
+import { useNavigate } from 'react-router-dom';
 
 function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setMessage('');
-
-    if (isAccountLocked()) {
-      setMessage(LOCKOUT_MESSAGE);
-      return;
-    }
-
-    const u = username.trim();
-    const p = password.trim();
-    if (!u || !p) {
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const result = await loginRequest(u, p);
-      if (result.ok) {
-        clearLoginFailuresAndLockout();
-        navigate('/mock');
-        return;
-      }
-      if (result.error === AUTH_ERROR) {
-        recordLoginFailure();
-        setMessage(isAccountLocked() ? LOCKOUT_MESSAGE : AUTH_ERROR);
-      } else {
-        setMessage(result.error);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   return (
     <div style={styles.container}>
@@ -58,62 +16,22 @@ function Login() {
         <h2 style={styles.title}>Welcome back</h2>
         <p style={styles.subtitle}>Sign in to continue studying</p>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <label htmlFor="login-username" style={styles.label}>
-            EMAIL OR USERNAME
-          </label>
-          <input
-            id="login-username"
-            style={styles.input}
-            type="text"
-            autoComplete="username"
-            placeholder="you@example.com"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+        <label style={styles.label}>EMAIL OR USERNAME</label>
+        <input style={styles.input} type="text" placeholder="you@example.com" />
 
-          <label htmlFor="login-password" style={styles.label}>
-            PASSWORD
-          </label>
-          <input
-            id="login-password"
-            style={styles.input}
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        <label style={styles.label}>PASSWORD</label>
+        <input style={styles.input} type="password" placeholder="••••••••" />
 
-          <div style={styles.rememberMe}>
-            <input id="login-remember" type="checkbox" />
-            <label htmlFor="login-remember" style={styles.rememberLabel}>
-              Remember me
-            </label>
-          </div>
+        <div style={styles.rememberMe}>
+          <input type="checkbox" />
+          <span>Remember me</span>
+        </div>
 
-          {message ? (
-            <p role="alert" style={styles.error}>
-              {message}
-            </p>
-          ) : null}
-
-          <button
-            type="submit"
-            style={styles.signInButton}
-            disabled={submitting}
-          >
-            Sign In
-          </button>
-        </form>
+        <button style={styles.signInButton}>Sign In</button>
 
         <p style={styles.or}>or</p>
 
-        <button
-          type="button"
-          style={styles.createButton}
-          onClick={() => navigate('/register')}
-        >
+        <button style={styles.createButton} onClick={() => navigate('/register')}>
           Create Account
         </button>
       </div>
@@ -121,7 +39,7 @@ function Login() {
   );
 }
 
-const styles: Record<string, CSSProperties> = {
+const styles = {
   container: {
     display: 'flex',
     justifyContent: 'center',
@@ -135,7 +53,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '10px',
     width: '350px',
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
   },
   logo: {
     fontSize: '20px',
@@ -155,15 +73,12 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '20px',
   },
   label: {
-    display: 'block',
     fontSize: '11px',
     fontWeight: 'bold',
     color: '#555',
     marginBottom: '5px',
   },
   input: {
-    width: '100%',
-    boxSizing: 'border-box',
     padding: '10px',
     marginBottom: '15px',
     borderRadius: '5px',
@@ -178,18 +93,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     color: '#333',
   },
-  rememberLabel: {
-    cursor: 'pointer',
-    margin: 0,
-  },
-  error: {
-    color: '#b00020',
-    fontSize: '13px',
-    marginBottom: '10px',
-    marginTop: 0,
-  },
   signInButton: {
-    width: '100%',
     padding: '10px',
     backgroundColor: '#6b8f71',
     color: 'white',
@@ -200,13 +104,12 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '10px',
   },
   or: {
-    textAlign: 'center',
+    textAlign: 'center' as const,
     color: '#888',
     fontSize: '13px',
     marginBottom: '10px',
   },
   createButton: {
-    width: '100%',
     padding: '10px',
     backgroundColor: 'white',
     border: '1px solid #ccc',

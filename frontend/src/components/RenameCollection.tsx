@@ -1,3 +1,8 @@
+//Halema Diab
+//Code for UC8- Rename Collection
+//Maps to FR-18, FR-28, NFR-03
+//This component lets the user type a new collection name and save it
+
 import { useState } from 'react';
 
 interface Props {

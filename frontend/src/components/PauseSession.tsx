@@ -1,3 +1,8 @@
+//Halema Diab
+//Code for UC9- Pause study session
+//maps to FR-19, FR-28, NFR-05, NFR-06
+//A component that shows up when a user pauses a session with thier progress and different options on where ot be redirected
+
 interface Props {
   deckName: string;
   currentCard: number;

@@ -7,7 +7,7 @@ function MockPage() {
   const [showPause, setShowPause] = useState(false);
 
   return (
-    <div style={styles.container} data-testid="landing-page">
+    <div style={styles.container}>
       <button style={styles.button} onClick={() => setShowRename(true)}>
         Rename Collection
       </button>
