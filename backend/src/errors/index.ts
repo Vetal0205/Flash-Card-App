@@ -1,5 +1,7 @@
 export { AppError } from './AppError';
+export { CollectionNotFoundError } from './CollectionNotFoundError';
 export { CorruptedFileError } from './CorruptedFileError';
+export { EmptyCollectionError } from './EmptyCollectionError';
 export { EmptyFileError } from './EmptyFileError';
 export { FileTooLargeError } from './FileTooLargeError';
 export { InvalidFlashcardFormatError } from './InvalidFlashcardFormatError';
