@@ -1,4 +1,6 @@
 import UserRepository from '../repositories/UserRepository';
+import { UserOutput } from '../models/User';
+import { UserSettingsPreferencesUpdateAttributes } from '../models/UserSettingsPreferences';
 
 // Business logic for user profile management
 // FR-06 (Use Case 6): edit profile (name, email, password)
@@ -6,19 +8,19 @@ import UserRepository from '../repositories/UserRepository';
 // FR-21 (Use Case 12): theme preference — do inside SettingsPreferenceService instead? (TODO)
 
 class UserService {
-    async getProfile() {
-        throw new Error('Not implemented'); 
-    }
-
-    async updateProfile() {
+    async getProfile(userID: number): Promise<UserOutput> {
         throw new Error('Not implemented');
     }
 
-    async changePassword() {
+    async updateProfile(userID: number, data: { username?: string; email?: string }): Promise<UserOutput> {
         throw new Error('Not implemented');
     }
 
-    async updateSettings() {
+    async changePassword(userID: number, data: { currentPassword: string; newPassword: string }): Promise<void> {
+        throw new Error('Not implemented');
+    }
+
+    async updateSettings(userID: number, data: UserSettingsPreferencesUpdateAttributes): Promise<void> {
         throw new Error('Not implemented');
     }
 

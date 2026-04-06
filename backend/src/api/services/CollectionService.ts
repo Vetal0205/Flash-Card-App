@@ -1,5 +1,4 @@
-import { Collection } from '../models';
-import { CollectionCreationAttributes } from '../models/Collection';
+import Collection, { CollectionCreationAttributes, CollectionUpdateAttributes } from '../models/Collection';
 import CollectionRepository from '../repositories/CollectionRepository';
 import { Express } from 'express';
 
@@ -10,18 +9,18 @@ export interface ImportResult {
 
 // Business logic for flashcard collections
 // FR-01 (Use Case 10): import from file;
-// FR-04 (Use Case 16): share; 
-// FR-05 (Use Case 11): export PDF; 
-// FR-07: list all; 
-// FR-12: create; 
-// FR-13: delete; 
+// FR-04 (Use Case 16): share;
+// FR-05 (Use Case 11): export PDF;
+// FR-07: list all;
+// FR-12: create;
+// FR-13: delete;
 // FR-14: persistence across logout;
 // FR-18: rename;
 // FR-22: notify if file type is not supported;
-// FR-23: validate file content format 
+// FR-23: validate file content format
 
 class CollectionService {
-    async getAllCollectionsByUser() {
+    async getAllCollectionsByUser(userID: number): Promise<Collection[]> {
         throw new Error('Not implemented');
     }
 
@@ -31,11 +30,11 @@ class CollectionService {
         throw new Error('Not implemented');
     }
 
-    async rename() {
+    async rename(collectionID: number, collectionName: string): Promise<void> {
         throw new Error('Not implemented');
     }
 
-    async update() {
+    async update(collectionID: number, data: CollectionUpdateAttributes): Promise<void> {
         throw new Error('Not implemented');
     }
 
