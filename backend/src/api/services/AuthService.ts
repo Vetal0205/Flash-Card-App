@@ -23,6 +23,27 @@ class AuthService {
     async logout(): Promise<void> {
         throw new Error('Not implemented');
     }
+
+    // FR-30: lockout logic
+    async incrementFailedAttempts() {
+        throw new Error('Not implemented');
+    }
+
+    async lockAccount() {
+        throw new Error('Not implemented');
+    }
+
+    async resetFailedAttempts() {
+        throw new Error('Not implemented');
+    }
+
+    async updateLastActive() {
+        throw new Error('Not implemented');
+    }
+
+    async updateSecurityStatus() {
+        throw new Error('Not implemented');
+    }
 }
 
 export default new AuthService();

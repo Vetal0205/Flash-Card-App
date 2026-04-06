@@ -1,7 +1,8 @@
-import StudySession from '../models/StudySession';
-import StudyResult from '../models/StudyResult';
+import StudySession, { StudySessionCreationAttributes, StudySessionUpdateAttributes } from '../models/StudySession';
+import StudySessionCardOrder, { StudySessionCardOrderCreationAttributes } from '../models/StudySessionCardOrder';
+import StudySessionResponse, { StudySessionResponseCreationAttributes } from '../models/StudySessionResponse';
 
-// Data access for StudySession and StudyResult
+// Data access for StudySession, StudySessionResponse, StudySessionCardOrder
 // Called by: StudySessionService
 // FR-19: pause/resume; 
 // FR-20: summary; 
@@ -10,39 +11,38 @@ import StudyResult from '../models/StudyResult';
 class StudySessionRepository {
     // TODO: implement each method
 
-    async create(): Promise<StudySession> {
+    async createSession(data: StudySessionCreationAttributes): Promise<StudySession> {
         throw new Error('Not implemented');
     }
 
-    async findActiveByUser(userId: number): Promise<StudySession | null> {
+    async findActiveSessionByUser(userID: number): Promise<StudySession | null> {
         throw new Error('Not implemented');
     }
 
-    async findById(id: number): Promise<StudySession | null> {
+    async findSessionById(id: number): Promise<StudySession | null> {
         throw new Error('Not implemented');
     }
 
-    async pause(id: number, currentCardIndex: number): Promise<void> {
+    // Covers pause (status/pausedAt), resume (status/pausedAt), complete (status/completedAt/durationSeconds)
+    async updateSession(id: number, data: StudySessionUpdateAttributes): Promise<void> {
         throw new Error('Not implemented');
     }
 
-    async resume(id: number): Promise<void> {
+    // Bulk-inserts the randomized card order when a session starts (FR-10)
+    async createCardOrder(cards: StudySessionCardOrderCreationAttributes[]): Promise<void> {
         throw new Error('Not implemented');
     }
 
-    async complete(id: number): Promise<void> {
+    // Retrieves card order for session restore (NFR-05/06)
+    async getCardOrder(sessionID: number): Promise<StudySessionCardOrder[]> {
         throw new Error('Not implemented');
     }
 
-    async recordAnswer(data: {
-        studySessionId: number;
-        flashcardId: number;
-        answer: 'correct' | 'incorrect' | 'skipped';
-    }): Promise<StudyResult> {
+    async recordAnswer(data: StudySessionResponseCreationAttributes): Promise<StudySessionResponse> {
         throw new Error('Not implemented');
     }
 
-    async getSummary(studySessionId: number): Promise<StudyResult[]> {
+    async getSummary(sessionID: number): Promise<StudySessionResponse[]> {
         throw new Error('Not implemented');
     }
 }

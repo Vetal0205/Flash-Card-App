@@ -18,6 +18,10 @@ class UserService {
         throw new Error('Not implemented');
     }
 
+    async updateSettings() {
+        throw new Error('Not implemented');
+    }
+
     async deleteAccount() {
         throw new Error('Not implemented');
     }
