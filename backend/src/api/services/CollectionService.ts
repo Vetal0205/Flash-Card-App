@@ -20,6 +20,14 @@ export interface ImportResult {
 // FR-22: notify if file type is not supported;
 // FR-23: validate file content format 
 
+export type CollectionActionConfirmation = 'Confirm' | 'Cancel' | 'Dismiss';
+
+export interface ShareCollectionResult {
+    shared: boolean;
+    message: string;
+    collection: Collection | null;
+}
+
 class CollectionService {
     async getAllCollectionsByUser() {
         throw new Error('Not implemented');
@@ -46,8 +54,47 @@ class CollectionService {
         throw new Error('Not implemented');
     }
 
-    async share() {
-        throw new Error('Not implemented');
+    async share(
+        userID: number,
+        collectionID: number,
+        confirmation: CollectionActionConfirmation
+    ): Promise<ShareCollectionResult> {
+        if (confirmation === 'Cancel') {
+            return {
+                shared: false,
+                message: 'Collection sharing canceled.',
+                collection: null,
+            };
+        }
+
+        if (confirmation === 'Dismiss') {
+            return {
+                shared: false,
+                message: 'Collection sharing dismissed.',
+                collection: null,
+            };
+        }
+
+        const collection = await CollectionRepository.findCollectionById(collectionID);
+
+        if (!collection) {
+            throw new Error('Collection not found.');
+        }
+
+        if (collection.userID !== userID) {
+            throw new Error('You can only share collections you own.');
+        }
+
+        if (collection.visibility !== 'public') {
+            await CollectionRepository.updateCollection(collectionID, { visibility: 'public' });
+            collection.visibility = 'public';
+        }
+
+        return {
+            shared: true,
+            message: 'Collection shared successfully.',
+            collection,
+        };
     }
 
     async importFromFile(
