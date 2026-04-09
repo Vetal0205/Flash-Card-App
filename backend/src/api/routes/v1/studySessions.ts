@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import StudySessionController from '../../controllers/StudySessionController';
-
+import AuthMiddleware from '../../middlewares/AuthMiddleware';
 
 const router: Router = Router();
-// All routes require authentication TBD
+router.use(AuthMiddleware.authenticate.bind(AuthMiddleware));
 
 
 // UC-4:  POST  /api/v1/study-sessions          (start new session, collectionId in body)

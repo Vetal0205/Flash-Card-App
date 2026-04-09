@@ -39,6 +39,11 @@ class UserRepository {
     async updateSettings(id: number, data: UserSettingsPreferencesUpdateAttributes): Promise<void> {
         throw new Error('Not implemented');
     }
+    
+    // FR-25: username as an alternative login credential
+    async findUserByUsername(username: string): Promise<User | null> {
+        throw new Error('Not implemented');
+    }
 }
 
 export default new UserRepository();

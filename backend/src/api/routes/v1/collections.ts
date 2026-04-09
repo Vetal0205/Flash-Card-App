@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import CollectionController from '../../controllers/CollectionController';
+import AuthMiddleware from '../../middlewares/AuthMiddleware';
 
 // TODO: add multer middleware to importFile route (FR-01/22/23)
 
 const router: Router = Router();
-// All routes require authentication TBD
+router.use(AuthMiddleware.authenticate.bind(AuthMiddleware));
 
 // UC-3:  GET    /api/v1/collections
 router.get('/', CollectionController.getAll.bind(CollectionController));

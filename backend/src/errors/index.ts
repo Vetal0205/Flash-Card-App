@@ -1,5 +1,6 @@
 export { AppError } from './AppError';
 export { CollectionNotFoundError } from './CollectionNotFoundError';
+export { ConflictError } from './ConflictError';
 export { CorruptedFileError } from './CorruptedFileError';
 export { EmptyCollectionError } from './EmptyCollectionError';
 export { EmptyFileError } from './EmptyFileError';
@@ -8,3 +9,4 @@ export { InvalidFlashcardFormatError } from './InvalidFlashcardFormatError';
 export { NoFileSelectedError } from './NoFileSelectedError';
 export { UnauthorizedError } from './UnauthorizedError';
 export { UnsupportedFileFormatError } from './UnsupportedFileFormatError';
+export { ValidationError } from './ValidationError';

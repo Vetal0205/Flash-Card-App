@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import FlashcardController from '../../controllers/FlashcardController';
-
+import AuthMiddleware from '../../middlewares/AuthMiddleware';
 
 const router: Router = Router();
-// All routes require authentication TBD
+router.use(AuthMiddleware.authenticate.bind(AuthMiddleware));
 
 
 // UC-14: POST   /api/v1/flashcards  (create in a collection, collectionId in body)

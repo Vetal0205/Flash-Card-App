@@ -11,6 +11,10 @@ export const ANSWER = {
     SKIPPED: 'skipped'
 } as const;
 
+// FR-29: JWT token lifetimes
+export const DEFAULT_TOKEN_EXPIRES = '1h';
+export const REMEMBER_ME_EXPIRES = '30d';
+
 // FR-23: allowed file upload formats
 export const ALLOWED_UPLOAD_FORMATS = ['text/plain'] as const;
 

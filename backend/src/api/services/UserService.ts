@@ -1,5 +1,6 @@
 import UserRepository from '../repositories/UserRepository';
-import { UserCreationAttributes, UserOutput } from '../models/User';
+import User, { UserCreationAttributes, UserOutput } from '../models/User';
+import { UserSecurityStatusUpdateAttributes } from '../models/UserSecurityStatus';
 import { UserSettingsPreferencesUpdateAttributes } from '../models/UserSettingsPreferences';
 
 // Business logic for user profile management
@@ -16,6 +17,22 @@ export interface DeleteAccountResult {
 
 class UserService {
     async getProfile(userID: number): Promise<UserOutput> {
+        throw new Error('Not implemented');
+    }
+
+    async findById(userID: number): Promise<UserOutput | null> {
+        throw new Error('Not implemented');
+    }
+
+    async findByEmail(email: string): Promise<User | null> {
+        throw new Error('Not implemented');
+    }
+
+    async findByUsername(username: string): Promise<User | null> {
+        throw new Error('Not implemented');
+    }
+
+    async updateSecurityStatus(userID: number, data: UserSecurityStatusUpdateAttributes): Promise<void> {
         throw new Error('Not implemented');
     }
 
@@ -59,6 +76,10 @@ class UserService {
             message: 'Account deleted successfully.',
         };
     }
+    async create(data: UserCreationAttributes): Promise<UserOutput> {
+        return UserRepository.createUser(data);
+    }
+
 }
 
 export default new UserService();
