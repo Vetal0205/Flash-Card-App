@@ -2,22 +2,36 @@
 // UC6 - Edit Profile Page
 // This page allows a logged in user to update their username, email, and password
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const dummyUser = {
-  username: "Jane Doe",
-  email: "demo@minddeck.com",
-};
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 export default function EditProfile() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState(dummyUser.username);
-  const [email, setEmail] = useState(dummyUser.email);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [errors, setErrors] = useState<{ username?: string; email?: string; password?: string }>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/users/me`, {
+      credentials: 'include',
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setUsername(data.username || "");
+        setEmail(data.email || "");
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load profile:", err);
+        setLoading(false);
+      });
+  }, []);
 
   const getInitials = (uname: string) => {
     const parts = uname.trim().split(" ");
@@ -42,33 +56,74 @@ export default function EditProfile() {
     return newErrors;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       setSuccessMsg("");
       return;
     }
-    // TODO: Replace with real API call to PATCH /api/v1/users/me
-    // Only include password in body if user typed a new one
-    const payload: { username: string; email: string; passwordHash?: string } = {
-      username,
-      email,
-      ...(password && { passwordHash: password }),
-    };
-    console.log("Saving profile:", payload);
-    setErrors({});
-    setSuccessMsg("Profile updated successfully!");
-    setPassword("");
+
+    try {
+      const profileRes = await fetch(`${API_BASE}/api/v1/users/me`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username, email }),
+      });
+
+      if (!profileRes.ok) {
+        const errData = await profileRes.json();
+        setErrors({ username: errData.message || "Failed to update profile." });
+        return;
+      }
+
+      if (password) {
+        const passRes = await fetch(`${API_BASE}/api/v1/users/me/password`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ password }),
+        });
+
+        if (!passRes.ok) {
+          const errData = await passRes.json();
+          setErrors({ password: errData.message || "Failed to update password." });
+          return;
+        }
+      }
+
+      setErrors({});
+      setSuccessMsg("Profile updated successfully!");
+      setPassword("");
+    } catch (err) {
+      console.error("Save failed:", err);
+      setErrors({ username: "Something went wrong. Please try again." });
+    }
   };
 
   const handleCancel = () => {
-    setUsername(dummyUser.username);
-    setEmail(dummyUser.email);
-    setPassword("");
-    setErrors({});
-    setSuccessMsg("");
+    setLoading(true);
+    fetch(`${API_BASE}/api/v1/users/me`, { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        setUsername(data.username || "");
+        setEmail(data.email || "");
+        setPassword("");
+        setErrors({});
+        setSuccessMsg("");
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   };
+
+  if (loading) {
+    return (
+      <div style={styles.page}>
+        <div style={{ textAlign: 'center', paddingTop: '80px', color: '#888' }}>Loading profile...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
