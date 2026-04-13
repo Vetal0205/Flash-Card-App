@@ -1,7 +1,9 @@
 import UserRepository from '../repositories/UserRepository';
-import User, { UserCreationAttributes, UserOutput } from '../models/User';
+import bcrypt from 'bcrypt';
+import User, { UserCreationAttributes, UserOutput, UserUpdateAttributes } from '../models/User';
 import { UserSecurityStatusUpdateAttributes } from '../models/UserSecurityStatus';
 import { UserSettingsPreferencesUpdateAttributes } from '../models/UserSettingsPreferences';
+import { UnauthorizedError, ValidationError } from '../../errors';
 
 // Business logic for user profile management
 // FR-06 (Use Case 6): edit profile (name, email, password)
@@ -15,37 +17,101 @@ export interface DeleteAccountResult {
     message: string;
 }
 
+const BCRYPT_ROUNDS = 12;
+const PASSWORD_MIN_LENGTH = 12;
+
 class UserService {
     async getProfile(userID: number): Promise<UserOutput> {
-        throw new Error('Not implemented');
+        const user = await UserRepository.findUserById(userID);
+        if (!user) {
+            throw new Error('User not found.');
+        }
+        return user;
     }
 
     async findById(userID: number): Promise<UserOutput | null> {
-        throw new Error('Not implemented');
+        return UserRepository.findUserById(userID);
     }
 
     async findByEmail(email: string): Promise<User | null> {
-        throw new Error('Not implemented');
+        return UserRepository.findUserByEmail(email);
     }
 
     async findByUsername(username: string): Promise<User | null> {
-        throw new Error('Not implemented');
+        return UserRepository.findUserByUsername(username);
     }
 
     async updateSecurityStatus(userID: number, data: UserSecurityStatusUpdateAttributes): Promise<void> {
-        throw new Error('Not implemented');
+        await UserRepository.updateSecurityStatus(userID, data);
     }
 
     async updateProfile(userID: number, data: UserCreationAttributes): Promise<UserOutput> {
-        throw new Error('Not implemented');
+        // FR-06: edit profile fields for the authenticated user.
+        const payload: UserUpdateAttributes = {};
+        if (data.username !== undefined) {
+            payload.username = data.username;
+        }
+        if (data.email !== undefined) {
+            payload.email = data.email;
+        }
+        if (data.passwordHash !== undefined) {
+            payload.passwordHash = data.passwordHash;
+        }
+
+        if (Object.keys(payload).length === 0) {
+            throw new ValidationError('No profile fields provided for update.');
+        }
+
+        await UserRepository.updateUser(userID, payload);
+        const updated = await UserRepository.findUserById(userID);
+
+        if (!updated) {
+            throw new Error('User not found.');
+        }
+
+        return updated;
     }
 
     async changePassword(userID: number, data: { currentPassword: string; newPassword: string }): Promise<void> {
-        throw new Error('Not implemented');
+        const { currentPassword, newPassword } = data;
+
+        if (!currentPassword || !newPassword) {
+            throw new ValidationError('Current password and new password are required.');
+        }
+
+        // FR-27: enforce password complexity for password changes.
+        if (newPassword.length < PASSWORD_MIN_LENGTH) {
+            throw new ValidationError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`);
+        }
+        if (!/[A-Z]/.test(newPassword)) {
+            throw new ValidationError('Password must contain at least one uppercase letter.');
+        }
+        if (!/[0-9]/.test(newPassword)) {
+            throw new ValidationError('Password must contain at least one number.');
+        }
+
+        // FR-06: change password for authenticated user context.
+        const profile = await UserRepository.findUserById(userID);
+        if (!profile) {
+            throw new Error('User not found.');
+        }
+
+        const fullUser = await UserRepository.findUserByEmail(profile.email);
+        if (!fullUser) {
+            throw new Error('User not found.');
+        }
+
+        const passwordMatches = await bcrypt.compare(currentPassword, fullUser.passwordHash);
+        if (!passwordMatches) {
+            throw new UnauthorizedError('Current password is incorrect.');
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+        await UserRepository.updateUser(userID, { passwordHash });
     }
 
     async updateSettings(userID: number, data: UserSettingsPreferencesUpdateAttributes): Promise<void> {
-        throw new Error('Not implemented');
+        await UserRepository.updateSettings(userID, data);
     }
 
     async deleteAccount(userID: number, confirmation: UserActionConfirmation): Promise<DeleteAccountResult> {
@@ -63,6 +129,7 @@ class UserService {
             };
         }
 
+        // FR-09: delete account only after explicit confirmation.
         const user = await UserRepository.findUserById(userID);
 
         if (!user) {
