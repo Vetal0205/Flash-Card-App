@@ -148,7 +148,7 @@ describe('CollectionService — importFromFile', () => {
 
     /**
      * TC-UC10-F-002
-     * FR-22
+     * FR-23
      * Unsupported .pdf file (PDF is export-only; not accepted as import input).
      * Expected: UnsupportedFileFormatError thrown, FlashcardService never called.
      */
@@ -169,7 +169,7 @@ describe('CollectionService — importFromFile', () => {
 
     /**
      * TC-UC10-F-003
-     * FR-22
+     * FR-23
      * Unsupported .docx file.
      * Expected: UnsupportedFileFormatError thrown, FlashcardService never called.
      */
@@ -190,7 +190,7 @@ describe('CollectionService — importFromFile', () => {
 
     /**
      * TC-UC10-F-004
-     * FR-22
+     * FR-23
      * Unsupported .jpg file.
      * Expected: UnsupportedFileFormatError thrown, FlashcardService never called.
      */
@@ -244,7 +244,7 @@ describe('CollectionService — importFromFile', () => {
 
     /**
      * TC-UC10-F-007
-     * FR-01, FR-23
+     * FR-01, FR-22
      * Supported file type (.txt) but content has no recognisable Q/A pairs.
      * Expected: InvalidFlashcardFormatError thrown, FlashcardService never called.
      */
