@@ -22,12 +22,10 @@ jest.mock('../../api/repositories/CollectionRepository', () => ({
     },
 }));
 
-// CollectionService.exportAsPdf fetches flashcards directly from
-// FlashcardRepository, not via FlashcardService.
-jest.mock('../../api/repositories/FlashcardRepository', () => ({
+jest.mock('../../api/services/FlashcardService', () => ({
     __esModule: true,
     default: {
-        findAllFlashcardsByCollection: jest.fn(),
+        getAllByCollection: jest.fn(),
     },
 }));
 
@@ -56,7 +54,7 @@ jest.mock('pdfkit', () => {
 
 import collectionService from '../../api/services/CollectionService';
 import CollectionRepository from '../../api/repositories/CollectionRepository';
-import FlashcardRepository from '../../api/repositories/FlashcardRepository';
+import flashcardService from '../../api/services/FlashcardService';
 
 import {
     CollectionNotFoundError,
@@ -65,7 +63,7 @@ import {
 
 // Helpers
 
-// Returns a minimal mock Collection-like object for findCollectionById to resolve with. 
+// Returns a minimal mock Collection-like object for findCollectionById to resolve with.
 function makeMockCollection(collectionID: number, collectionName = 'Default Collection') {
     return {
         collectionID,
@@ -98,8 +96,8 @@ const FIVE_MOCK_FLASHCARDS  = Array.from({ length: 5 }, (_, i) => makeMockFlashc
 
 // Test Suite
 describe('CollectionService — exportAsPdf', () => {
-    const mockFindCollectionById            = CollectionRepository.findCollectionById as jest.Mock;
-    const mockFindAllFlashcardsByCollection = FlashcardRepository.findAllFlashcardsByCollection as jest.Mock;
+    const mockFindCollectionById    = CollectionRepository.findCollectionById as jest.Mock;
+    const mockGetAllByCollection    = flashcardService.getAllByCollection as jest.Mock;
 
     beforeEach(() => {
         // Without clearing, the next test might still see calls from the previous one.
@@ -107,7 +105,7 @@ describe('CollectionService — exportAsPdf', () => {
 
         // Defaults.
         mockFindCollectionById.mockResolvedValue(makeMockCollection(COLLECTION_ID));
-        mockFindAllFlashcardsByCollection.mockResolvedValue(FIVE_MOCK_FLASHCARDS);
+        mockGetAllByCollection.mockResolvedValue(FIVE_MOCK_FLASHCARDS);
     });
 
     // Functional test cases
@@ -119,10 +117,10 @@ describe('CollectionService — exportAsPdf', () => {
      * Expected: a non-empty Buffer is returned (the PDF bytes).
      */
     it('TC-UC11-F-001: returns a Buffer when exporting a valid collection with 5 flashcards', async () => {
-        // defines what happens when the service calls repo.findCollectionById and repo.findAllFlashcardsByCollection.
+        // defines what happens when the service calls repo.findCollectionById and service.getAllByCollection.
         // if we call mocked findCollectionById, it will resolve with a mock collection object.
         mockFindCollectionById.mockResolvedValue(makeMockCollection(COLLECTION_ID, 'Biology 101'));
-        mockFindAllFlashcardsByCollection.mockResolvedValue(FIVE_MOCK_FLASHCARDS);
+        mockGetAllByCollection.mockResolvedValue(FIVE_MOCK_FLASHCARDS);
 
         const result = await collectionService.exportAsPdf(COLLECTION_ID);
 
@@ -131,8 +129,8 @@ describe('CollectionService — exportAsPdf', () => {
         // Service must look up the collection and its flashcards exactly once.
         expect(mockFindCollectionById).toHaveBeenCalledTimes(1);
         expect(mockFindCollectionById).toHaveBeenCalledWith(COLLECTION_ID);
-        expect(mockFindAllFlashcardsByCollection).toHaveBeenCalledTimes(1);
-        expect(mockFindAllFlashcardsByCollection).toHaveBeenCalledWith(COLLECTION_ID);
+        expect(mockGetAllByCollection).toHaveBeenCalledTimes(1);
+        expect(mockGetAllByCollection).toHaveBeenCalledWith(COLLECTION_ID);
     });
 
     /**
@@ -143,7 +141,7 @@ describe('CollectionService — exportAsPdf', () => {
      */
     it('TC-UC11-F-002: throws EmptyCollectionError when the collection has 0 flashcards', async () => {
         mockFindCollectionById.mockResolvedValue(makeMockCollection(COLLECTION_ID, 'Empty Set'));
-        mockFindAllFlashcardsByCollection.mockResolvedValue([]);
+        mockGetAllByCollection.mockResolvedValue([]);
 
         const result = collectionService.exportAsPdf(COLLECTION_ID);
 
@@ -167,7 +165,7 @@ describe('CollectionService — exportAsPdf', () => {
         await expect(result).rejects.toThrow(CollectionNotFoundError);
         await expect(result).rejects.toThrow('Collection not found.');
         // Must abort before fetching flashcards.
-        expect(mockFindAllFlashcardsByCollection).not.toHaveBeenCalled();
+        expect(mockGetAllByCollection).not.toHaveBeenCalled();
     });
 
     /**
@@ -186,7 +184,7 @@ describe('CollectionService — exportAsPdf', () => {
             makeMockFlashcard(3, 'Résumé contains which accent?', 'Acute accent (é).'),
         ];
         mockFindCollectionById.mockResolvedValue(makeMockCollection(COLLECTION_ID, 'Special Chars'));
-        mockFindAllFlashcardsByCollection.mockResolvedValue(specialCards);
+        mockGetAllByCollection.mockResolvedValue(specialCards);
 
         const result = await collectionService.exportAsPdf(COLLECTION_ID);
 
@@ -194,8 +192,8 @@ describe('CollectionService — exportAsPdf', () => {
         expect(result.length).toBeGreaterThan(0);
         expect(mockFindCollectionById).toHaveBeenCalledTimes(1);
         expect(mockFindCollectionById).toHaveBeenCalledWith(COLLECTION_ID);
-        expect(mockFindAllFlashcardsByCollection).toHaveBeenCalledTimes(1);
-        expect(mockFindAllFlashcardsByCollection).toHaveBeenCalledWith(COLLECTION_ID);
+        expect(mockGetAllByCollection).toHaveBeenCalledTimes(1);
+        expect(mockGetAllByCollection).toHaveBeenCalledWith(COLLECTION_ID);
     });
 
     // Non-functional test cases
@@ -207,11 +205,11 @@ describe('CollectionService — exportAsPdf', () => {
      * Expected: all resolve with a Buffer; average response time ≤ 2 000 ms.
      *
      * Note: this is a unit-level smoke test with fully mocked I/O.
-     * Later will be translated to a realistic benchmark , running this against a live PDF renderer with a real database. 
+     * Later will be translated to a realistic benchmark , running this against a live PDF renderer with a real database.
      */
     it('TC-UC11-NF-001: handles 100 concurrent exports; average response time ≤ 2 s', async () => {
         const tenCards = Array.from({ length: 10 }, (_, i) => makeMockFlashcard(i + 1));
-        mockFindAllFlashcardsByCollection.mockResolvedValue(tenCards);
+        mockGetAllByCollection.mockResolvedValue(tenCards);
 
         const concurrency = 100;
         const startMs = Date.now();
