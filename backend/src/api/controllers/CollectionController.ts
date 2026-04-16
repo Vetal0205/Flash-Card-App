@@ -6,23 +6,70 @@ import CollectionService from '../services/CollectionService';
 
 class CollectionController {
     async getAll(req: Request, res: Response, next: NextFunction) {
-        next(new Error('Not implemented'));
+        try {
+            const userID = (req as any).userdata?.userID;
+            const collections = await CollectionService.getAllCollectionsByUser(userID);
+            res.status(200).json(collections);
+        } catch (err) {
+            next(err);
+        }
     }
 
     async create(req: Request, res: Response, next: NextFunction) {
-        next(new Error('Not implemented'));
+        try {
+            const userID = (req as any).userdata?.userID;
+            const { collectionName, description, visibility } = req.body;
+
+            // FR-12: create collection in authenticated user's scope.
+            const collection = await CollectionService.create({
+                userID,
+                collectionName,
+                description,
+                visibility,
+            });
+
+            res.status(201).json(collection);
+        } catch (err) {
+            next(err);
+        }
     }
 
     async rename(req: Request, res: Response, next: NextFunction) {
-        next(new Error('Not implemented'));
+        try {
+            const userID = (req as any).userdata?.userID;
+            const collectionID = Number(req.params.id);
+            const { collectionName } = req.body;
+
+            await CollectionService.rename(collectionID, collectionName, userID);
+            res.status(204).send();
+        } catch (err) {
+            next(err);
+        }
     }
 
     async delete(req: Request, res: Response, next: NextFunction) {
-        next(new Error('Not implemented'));
+        try {
+            const userID = (req as any).userdata?.userID;
+            const collectionID = Number(req.params.id);
+
+            await CollectionService.delete(userID, collectionID);
+            res.status(204).send();
+        } catch (err) {
+            next(err);
+        }
     }
 
     async share(req: Request, res: Response, next: NextFunction) {
-        next(new Error('Not implemented'));
+        try {
+            const userID = (req as any).userdata?.userID;
+            const collectionID = Number(req.params.id);
+
+            // FR-04: frontend confirms action; backend executes share.
+            const result = await CollectionService.share(userID, collectionID);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
     }
 
     async importFile(req: Request, res: Response, next: NextFunction) {
