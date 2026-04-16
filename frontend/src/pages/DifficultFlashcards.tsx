@@ -1,29 +1,65 @@
 // Srinidhi Sivakaminathan
 // UC7 - Review Difficult Flashcards Page
-// This page shows flashcards that the user previously marked as difficult
-// User can flip cards to see the answer and navigate between them
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const dummyCards = [
-  { flashcardID: 1, collectionID: 1, question: "What is the nucleus?", answer: "Controls cell activities", knownCount: 1, unknownCount: 3, isFlaggedDifficult: true },
-  { flashcardID: 2, collectionID: 1, question: "Define osmosis", answer: "Movement of water across membranes", knownCount: 0, unknownCount: 4, isFlaggedDifficult: true },
-  { flashcardID: 3, collectionID: 1, question: "What does ATP do?", answer: "Stores energy for cells", knownCount: 2, unknownCount: 2, isFlaggedDifficult: true },
-  { flashcardID: 4, collectionID: 1, question: "What is mitosis?", answer: "Cell division producing identical cells", knownCount: 0, unknownCount: 5, isFlaggedDifficult: true },
-];
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-const collectionName = "Spanish Vocabulary";
+const Logo = () => (
+  <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="9" y="6" width="20" height="15" rx="3" fill="#a8c5a0" stroke="#6b8f71" strokeWidth="1.5"/>
+    <rect x="5" y="13" width="20" height="15" rx="3" fill="white" stroke="#6b8f71" strokeWidth="1.5"/>
+  </svg>
+);
+
+interface Flashcard {
+  flashcardID: number;
+  collectionID: number;
+  question: string;
+  answer: string;
+  knownCount: number;
+  unknownCount: number;
+  isFlaggedDifficult: boolean;
+}
 
 export default function DifficultFlashcards() {
   const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [cards, setCards] = useState<Flashcard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const totalCards = dummyCards.length;
-  const currentCard = dummyCards[currentIndex];
-  const progress = Math.round(((currentIndex + 1) / totalCards) * 100);
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/flashcards/flagged`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setCards(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setCards([]);
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const totalCards = cards.length;
+  const currentCard = cards[currentIndex];
+  const progress = totalCards > 0 ? Math.round(((currentIndex + 1) / totalCards) * 100) : 0;
 
   const handleNext = () => {
     if (currentIndex < totalCards - 1) { setCurrentIndex(currentIndex + 1); setIsFlipped(false); }
@@ -31,25 +67,63 @@ export default function DifficultFlashcards() {
   const handlePrevious = () => {
     if (currentIndex > 0) { setCurrentIndex(currentIndex - 1); setIsFlipped(false); }
   };
-  const handleFlip = () => setIsFlipped(!isFlipped);
+
+  const handleLogout = () => {
+    fetch(`${API_BASE}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <div style={styles.page}>
+        <div style={{ textAlign: 'center', paddingTop: '80px', color: '#888' }}>Loading difficult flashcards...</div>
+      </div>
+    );
+  }
+
+  if (totalCards === 0) {
+    return (
+      <div style={styles.page}>
+        <nav style={styles.navbar}>
+          <div style={styles.navBrand}>
+            <Logo />
+            <span style={styles.navTitle}>MindDeck</span>
+          </div>
+          <button style={styles.exitBtn} onClick={() => navigate('/collections')}>Exit Study</button>
+        </nav>
+        <div style={{ textAlign: 'center', paddingTop: '80px' }}>
+          <p style={{ color: '#888', fontFamily: 'sans-serif', fontSize: '16px' }}>No difficult flashcards found. Mark some as difficult first!</p>
+          <button style={{ ...styles.navBtn, marginTop: '16px' }} onClick={() => navigate('/collections')}>Back to Collections</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
       <nav style={styles.navbar}>
         <div style={styles.navBrand}>
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="9" y="6" width="20" height="15" rx="3" fill="#a8c5a0" stroke="#6b8f71" strokeWidth="1.5"/>
-            <rect x="5" y="13" width="20" height="15" rx="3" fill="white" stroke="#6b8f71" strokeWidth="1.5"/>
-          </svg>
+          <Logo />
           <span style={styles.navTitle}>MindDeck</span>
         </div>
-        <button style={styles.exitBtn} onClick={() => navigate('/collections')}>Exit Study</button>
+        <div style={styles.navRight}>
+          <button style={styles.exitBtn} onClick={() => navigate('/collections')}>Exit Study</button>
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 Profile</button>
+            {showProfileMenu && (
+              <div style={styles.dropdown}>
+                <button style={styles.dropdownItem} onClick={() => { setShowProfileMenu(false); navigate('/edit-profile'); }}>Edit Profile</button>
+                <button style={{ ...styles.dropdownItem, color: '#c0392b' }} onClick={handleLogout}>Log Out</button>
+              </div>
+            )}
+          </div>
+        </div>
       </nav>
 
       <div style={styles.container}>
         <button style={styles.backBtn} onClick={() => navigate('/collections')}>← Back to Collection</button>
         <h2 style={styles.heading}>Study: Difficult Cards</h2>
-        <p style={styles.subtitle}>{collectionName} · {totalCards} difficult cards</p>
+        <p style={styles.subtitle}>{totalCards} difficult cards</p>
 
         <div style={styles.progressRow}>
           <span style={styles.progressLabel}>Card {currentIndex + 1} of {totalCards}</span>
@@ -61,7 +135,7 @@ export default function DifficultFlashcards() {
 
         <p style={styles.flipHint}>Click card to reveal answer</p>
 
-        <div style={styles.cardWrapper} onClick={handleFlip}>
+        <div style={styles.cardWrapper} onClick={() => setIsFlipped(!isFlipped)}>
           <div style={styles.difficultBadge}>Difficult</div>
           <div style={styles.cardSide}>
             <p style={styles.cardLabel}>{isFlipped ? "ANSWER" : "QUESTION"}</p>
@@ -75,8 +149,16 @@ export default function DifficultFlashcards() {
         </div>
 
         <div style={styles.navBtns}>
-          <button style={{ ...styles.navBtn, opacity: currentIndex === 0 ? 0.4 : 1, cursor: currentIndex === 0 ? "not-allowed" : "pointer" }} onClick={handlePrevious} disabled={currentIndex === 0}>← Previous</button>
-          <button style={{ ...styles.navBtn, opacity: currentIndex === totalCards - 1 ? 0.4 : 1, cursor: currentIndex === totalCards - 1 ? "not-allowed" : "pointer" }} onClick={handleNext} disabled={currentIndex === totalCards - 1}>Next →</button>
+          <button
+            style={{ ...styles.navBtn, opacity: currentIndex === 0 ? 0.4 : 1, cursor: currentIndex === 0 ? "not-allowed" : "pointer" }}
+            onClick={handlePrevious}
+            disabled={currentIndex === 0}
+          >← Previous</button>
+          <button
+            style={{ ...styles.navBtn, opacity: currentIndex === totalCards - 1 ? 0.4 : 1, cursor: currentIndex === totalCards - 1 ? "not-allowed" : "pointer" }}
+            onClick={handleNext}
+            disabled={currentIndex === totalCards - 1}
+          >Next →</button>
         </div>
       </div>
     </div>
@@ -88,7 +170,11 @@ const styles: Record<string, React.CSSProperties> = {
   navbar: { backgroundColor: "#ffffff", padding: "12px 24px", borderBottom: "1px solid #e0ddd6", display: "flex", alignItems: "center", justifyContent: "space-between" },
   navBrand: { display: "flex", alignItems: "center", gap: "8px" },
   navTitle: { fontWeight: "bold", fontSize: "18px", color: "#2c2c2c", letterSpacing: "0.5px" },
+  navRight: { display: "flex", alignItems: "center", gap: "10px" },
   exitBtn: { background: "none", border: "1px solid #ddd", borderRadius: "8px", padding: "6px 16px", fontSize: "14px", color: "#555", cursor: "pointer", fontFamily: "sans-serif" },
+  profileBtn: { background: "none", border: "1px solid #ddd", borderRadius: "8px", padding: "6px 16px", fontSize: "14px", color: "#555", cursor: "pointer", fontFamily: "sans-serif" },
+  dropdown: { position: "absolute", right: 0, top: "40px", backgroundColor: "#ffffff", border: "1px solid #e0ddd6", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, minWidth: "150px", overflow: "hidden" },
+  dropdownItem: { display: "block", width: "100%", padding: "10px 16px", fontSize: "14px", fontFamily: "sans-serif", background: "none", border: "none", textAlign: "left", cursor: "pointer", color: "#333" },
   container: { maxWidth: "600px", margin: "0 auto", padding: "32px 16px" },
   backBtn: { background: "none", border: "none", color: "#555", fontSize: "14px", cursor: "pointer", marginBottom: "16px", padding: "0" },
   heading: { fontSize: "22px", fontWeight: "bold", color: "#1a1a1a", marginBottom: "4px", marginTop: "0" },
