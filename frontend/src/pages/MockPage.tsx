@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import RenameCollection from '../components/RenameCollection';
 import PauseSession from '../components/PauseSession';
 
@@ -8,6 +9,14 @@ function MockPage() {
 
   return (
     <div style={styles.container} data-testid="landing-page">
+      <div style={styles.navLinks}>
+        <Link style={styles.link} to="/settings/appearance">
+          Appearance settings
+        </Link>
+        <Link style={styles.link} to="/collections">
+          Collections
+        </Link>
+      </div>
       <button style={styles.button} onClick={() => setShowRename(true)}>
         Rename Collection
       </button>
@@ -47,7 +56,18 @@ const styles = {
     justifyContent: 'center',
     height: '100vh',
     gap: '20px',
-    backgroundColor: '#f5f0eb',
+    backgroundColor: 'var(--app-bg, #f5f0eb)',
+  },
+  navLinks: {
+    display: 'flex',
+    gap: '16px',
+    flexWrap: 'wrap' as const,
+    justifyContent: 'center',
+  },
+  link: {
+    color: 'var(--app-accent, #6b8f71)',
+    fontSize: 14,
+    fontFamily: 'sans-serif',
   },
   button: {
     padding: '12px 24px',

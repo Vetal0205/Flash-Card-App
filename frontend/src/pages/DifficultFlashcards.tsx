@@ -6,6 +6,7 @@
 import { useState } from "react";
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 const dummyCards = [
   { flashcardID: 1, collectionID: 1, question: "What is the nucleus?", answer: "Controls cell activities", knownCount: 1, unknownCount: 3, isFlaggedDifficult: true },
@@ -35,16 +36,17 @@ export default function DifficultFlashcards() {
 
   return (
     <div style={styles.page}>
-      <nav style={styles.navbar}>
-        <div style={styles.navBrand}>
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="9" y="6" width="20" height="15" rx="3" fill="#a8c5a0" stroke="#6b8f71" strokeWidth="1.5"/>
-            <rect x="5" y="13" width="20" height="15" rx="3" fill="white" stroke="#6b8f71" strokeWidth="1.5"/>
-          </svg>
-          <span style={styles.navTitle}>MindDeck</span>
-        </div>
-        <button style={styles.exitBtn} onClick={() => navigate('/collections')}>Exit Study</button>
-      </nav>
+      <Navbar
+        appendRight={
+          <button
+            type="button"
+            style={styles.exitBtn}
+            onClick={() => navigate('/collections')}
+          >
+            Exit Study
+          </button>
+        }
+      />
 
       <div style={styles.container}>
         <button style={styles.backBtn} onClick={() => navigate('/collections')}>← Back to Collection</button>
@@ -84,11 +86,8 @@ export default function DifficultFlashcards() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", backgroundColor: "#f5f3ee", fontFamily: "Georgia, serif" },
-  navbar: { backgroundColor: "#ffffff", padding: "12px 24px", borderBottom: "1px solid #e0ddd6", display: "flex", alignItems: "center", justifyContent: "space-between" },
-  navBrand: { display: "flex", alignItems: "center", gap: "8px" },
-  navTitle: { fontWeight: "bold", fontSize: "18px", color: "#2c2c2c", letterSpacing: "0.5px" },
-  exitBtn: { background: "none", border: "1px solid #ddd", borderRadius: "8px", padding: "6px 16px", fontSize: "14px", color: "#555", cursor: "pointer", fontFamily: "sans-serif" },
+  page: { minHeight: "100vh", backgroundColor: "var(--app-bg, #f5f3ee)", fontFamily: "Georgia, serif" },
+  exitBtn: { background: "none", border: "1px solid var(--app-border, #ddd)", borderRadius: "8px", padding: "6px 16px", fontSize: "14px", color: "var(--app-muted-strong, #555)", cursor: "pointer", fontFamily: "sans-serif" },
   container: { maxWidth: "600px", margin: "0 auto", padding: "32px 16px" },
   backBtn: { background: "none", border: "none", color: "#555", fontSize: "14px", cursor: "pointer", marginBottom: "16px", padding: "0" },
   heading: { fontSize: "22px", fontWeight: "bold", color: "#1a1a1a", marginBottom: "4px", marginTop: "0" },

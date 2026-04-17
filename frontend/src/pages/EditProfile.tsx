@@ -5,6 +5,7 @@
 import { useState } from "react";
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 const dummyUser = {
   username: "Jane Doe",
@@ -72,15 +73,7 @@ export default function EditProfile() {
 
   return (
     <div style={styles.page}>
-      <nav style={styles.navbar}>
-        <div style={styles.navBrand}>
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="9" y="6" width="20" height="15" rx="3" fill="#a8c5a0" stroke="#6b8f71" strokeWidth="1.5"/>
-            <rect x="5" y="13" width="20" height="15" rx="3" fill="white" stroke="#6b8f71" strokeWidth="1.5"/>
-          </svg>
-          <span style={styles.navTitle}>MindDeck</span>
-        </div>
-      </nav>
+      <Navbar />
 
       <div style={styles.container}>
         <button style={styles.backBtn} onClick={() => navigate('/collections')}>
@@ -141,15 +134,12 @@ export default function EditProfile() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", backgroundColor: "#f5f3ee", fontFamily: "Georgia, serif" },
-  navbar: { backgroundColor: "#ffffff", padding: "12px 24px", borderBottom: "1px solid #e0ddd6", display: "flex", alignItems: "center" },
-  navBrand: { display: "flex", alignItems: "center", gap: "8px" },
-  navTitle: { fontWeight: "bold", fontSize: "18px", color: "#2c2c2c", letterSpacing: "0.5px" },
+  page: { minHeight: "100vh", backgroundColor: "var(--app-bg, #f5f3ee)", fontFamily: "Georgia, serif" },
   container: { maxWidth: "480px", margin: "0 auto", padding: "32px 16px" },
   backBtn: { background: "none", border: "none", color: "#555", fontSize: "14px", cursor: "pointer", marginBottom: "20px", padding: "0" },
-  card: { backgroundColor: "#ffffff", borderRadius: "12px", padding: "36px 32px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
+  card: { backgroundColor: "var(--app-card, #ffffff)", borderRadius: "12px", padding: "36px 32px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)", border: "1px solid var(--app-border, transparent)" },
   avatar: { width: "56px", height: "56px", borderRadius: "50%", backgroundColor: "#6b8f71", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: "bold", marginBottom: "16px" },
-  heading: { fontSize: "22px", fontWeight: "bold", color: "#1a1a1a", marginBottom: "24px", marginTop: "0" },
+  heading: { fontSize: "22px", fontWeight: "bold", color: "var(--app-fg, #1a1a1a)", marginBottom: "24px", marginTop: "0" },
   successBanner: { backgroundColor: "#eaf4ec", color: "#3a7d44", padding: "10px 14px", borderRadius: "8px", fontSize: "14px", marginBottom: "16px", border: "1px solid #b5d9bb" },
   fieldGroup: { marginBottom: "20px", display: "flex", flexDirection: "column", gap: "6px" },
   label: { fontSize: "11px", fontWeight: "bold", color: "#888", letterSpacing: "0.8px", fontFamily: "sans-serif" },
