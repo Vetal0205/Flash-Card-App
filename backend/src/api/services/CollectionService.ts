@@ -2,7 +2,7 @@ import Collection, { CollectionCreationAttributes, CollectionUpdateAttributes } 
 import CollectionRepository from '../repositories/CollectionRepository';
 import FlashcardService from './FlashcardService';
 import type { Request } from 'express';
-import { AppError, ForbiddenError } from '../../errors';
+import { AppError, ConflictError, ForbiddenError } from '../../errors';
 import PDFDocument from 'pdfkit';
 import {
     NoFileSelectedError,
@@ -58,10 +58,12 @@ class CollectionService {
 
     async create(data: CollectionCreationAttributes): Promise<Collection> {
         // FR-12: create new collection.
-        return CollectionRepository.createCollection({
-            ...data,
-            collectionName: data.collectionName.trim(),
-        });
+        const collectionName = data.collectionName.trim().toLowerCase();
+
+        const existing = await CollectionRepository.findByNameAndUser(data.userID, collectionName);
+        if (existing) throw new ConflictError('A collection with this name already exists.');
+
+        return CollectionRepository.createCollection({ ...data, collectionName });
     }
 
     async rename(userID: number, collection: Collection, collectionName: string): Promise<void> {

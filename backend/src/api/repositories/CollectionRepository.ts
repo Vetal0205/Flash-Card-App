@@ -19,6 +19,10 @@ class CollectionRepository {
         return Collection.findByPk(id);
     }
 
+    async findByNameAndUser(userID: number, collectionName: string): Promise<Collection | null> {
+        return Collection.findOne({ where: { userID, collectionName } });
+    }
+
     async createCollection(data: CollectionCreationAttributes): Promise<Collection> {
         return Collection.create(data);
     }
