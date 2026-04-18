@@ -15,6 +15,12 @@ This project supports two Docker setups:
 - `dev` mode for local development
 - `stage` mode for a production-style local environment
 
+Before using either Docker setup, copy the repo-level environment template:
+
+```powershell
+Copy-Item .env.example .env
+```
+
 ### Development Mode
 
 Start the development stack from the project root:
@@ -86,19 +92,13 @@ You can connect to the Docker databases from a local Postgres client.
 
 Development database:
 
-- host: `localhost`
-- port: `5432`
-- database: `minddeck`
-- username: `postgres`
-- password: `postgres`
+- use the development values defined in the repo-level `.env`
+- the development database is exposed through the port configured in `docker-compose.yml`
 
 Staging database:
 
-- host: `localhost`
-- port: `5433`
-- database: `minddeck_stage`
-- username: `postgres`
-- password: `postgres`
+- use the staging values defined in the repo-level `.env`
+- the staging database is exposed through the port configured in `docker-compose.stage.yml`
 
 You can also inspect either database through Docker:
 
