@@ -7,17 +7,14 @@ import { AppError, BadRequestError, ForbiddenError } from '../../errors';
 // Must run after AuthMiddleware (relies on req.userdata).
 
 class SessionAccessMiddleware {
-    async forSession(req: Request, res: Response, next: NextFunction): Promise<void> {
-        const rawId = req.params.sessionId;
-        if (!rawId) return next();
-
-        const sessionId = parseInt(String(rawId), 10);
-        if (isNaN(sessionId)) {
+    async forSession(req: Request, res: Response, next: NextFunction, sessionId: string): Promise<void> {
+        const id = parseInt(sessionId, 10);
+        if (isNaN(id)) {
             return next(new BadRequestError('sessionId must be a positive integer.'));
         }
 
         try {
-            const session = await StudySession.findByPk(sessionId);
+            const session = await StudySession.findByPk(id);
             if (!session) return next(new AppError('Session not found.', 404));
             if (session.userID !== req.userdata!.userID) return next(new ForbiddenError());
 

@@ -10,6 +10,8 @@ import { validate } from '../../middlewares/validator';
 
 const router: Router = Router({ mergeParams: true });
 
+router.param('sessionId', SessionAccessMiddleware.forSession.bind(SessionAccessMiddleware));
+
 const sessionIdParam = param('sessionId')
     .isInt({ min: 1 })
     .withMessage('sessionId must be a positive integer.');
@@ -17,7 +19,6 @@ const sessionIdParam = param('sessionId')
 const sessionAccess = [
     sessionIdParam,
     validate,
-    SessionAccessMiddleware.forSession.bind(SessionAccessMiddleware),
 ];
 
 // UC-4:  POST  /api/v1/collections/:collectionId/study-sessions

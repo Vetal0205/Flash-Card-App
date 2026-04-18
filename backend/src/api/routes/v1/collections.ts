@@ -12,7 +12,7 @@ import studySessionsRouter from './studySessions';
 
 const router: Router = Router();
 router.use(AuthMiddleware.authenticate.bind(AuthMiddleware));
-router.use(CollectionAccessMiddleware.forCollection.bind(CollectionAccessMiddleware));
+router.param('collectionId', CollectionAccessMiddleware.forCollection.bind(CollectionAccessMiddleware));
 
 // UC-3:  GET    /api/v1/collections
 router.get('/', CollectionController.getAll.bind(CollectionController));
