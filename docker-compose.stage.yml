@@ -1,0 +1,63 @@
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: flash-card-database-stage
+    environment:
+      POSTGRES_DB: minddeck_stage
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_stage_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d minddeck_stage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: stage
+    container_name: flash-card-backend-stage
+    command: sh -c "npm run sync-db && npm start"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      APP_NAME: MindDeck API
+      SERVER: staging
+      BACKEND_PORT: 5000
+      API_VERSION: v1
+      SECRET: replace-with-a-long-random-secret
+      CORS_ORIGIN: http://localhost:8080
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 100
+      DB_HOST: database
+      DB_DATABASE: minddeck_stage
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_PORT: 5432
+      DB_DIALECT: postgres
+      DB_TIMEZONE: UTC
+      DB_LOG: "false"
+      DB_POOL_MIN: 0
+      DB_POOL_MAX: 5
+    ports:
+      - "5002:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: stage
+      args:
+        REACT_APP_API_URL: http://localhost:5002
+    container_name: flash-card-frontend-stage
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_stage_data:
