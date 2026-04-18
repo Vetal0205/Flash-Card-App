@@ -1,36 +1,31 @@
 jest.mock('../../api/repositories/CollectionRepository', () => ({
     __esModule: true,
     default: {
-        findCollectionById: jest.fn(),
         updateCollection: jest.fn(),
+    },
+}));
+
+jest.mock('../../api/services/FlashcardService', () => ({
+    __esModule: true,
+    default: {
+        createBulk: jest.fn(),
+        getAllByCollection: jest.fn(),
     },
 }));
 
 import CollectionService from '../../api/services/CollectionService';
 import CollectionRepository from '../../api/repositories/CollectionRepository';
-import Collection from '../../api/models/Collection';
-
-type ConfirmationAction = 'Confirm' | 'Cancel' | 'Dismiss';
-
-type ShareCollectionResult = {
-    shared: boolean;
-    message: string;
-    collection: Collection | null;
-};
+import type Collection from '../../api/models/Collection';
+import { ForbiddenError } from '../../errors';
 
 describe('CollectionService share', () => {
     const mockedCollectionRepository = CollectionRepository as jest.Mocked<typeof CollectionRepository>;
-    const shareCollection = CollectionService.share as unknown as (
-        userID: number,
-        collectionID: number,
-        confirmation: ConfirmationAction
-    ) => Promise<ShareCollectionResult>;
 
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('shares the owned collection when the user confirms the action', async () => {
+    it('shares an owned private collection and makes it public', async () => {
         const mockCollection = {
             collectionID: 10,
             userID: 1,
@@ -41,10 +36,9 @@ describe('CollectionService share', () => {
             updatedAt: new Date('2026-03-15T00:00:00.000Z'),
         } as Collection;
 
-        mockedCollectionRepository.findCollectionById.mockResolvedValue(mockCollection);
         mockedCollectionRepository.updateCollection.mockResolvedValue();
 
-        const result = await shareCollection(1, 10, 'Confirm');
+        const result = await CollectionService.share(1, mockCollection);
 
         expect(result).toEqual({
             shared: true,
@@ -54,31 +48,42 @@ describe('CollectionService share', () => {
                 visibility: 'public',
             }),
         });
-        expect(mockedCollectionRepository.findCollectionById).toHaveBeenCalledWith(10);
         expect(mockedCollectionRepository.updateCollection).toHaveBeenCalledWith(10, { visibility: 'public' });
     });
 
-    it('does not share the collection when the user cancels the action', async () => {
-        const result = await shareCollection(1, 10, 'Cancel');
+    it('keeps an already shared collection public without duplicate update work', async () => {
+        const mockCollection = {
+            collectionID: 10,
+            userID: 1,
+            collectionName: 'Biology Review',
+            description: null,
+            visibility: 'public',
+            createdAt: new Date('2026-03-15T00:00:00.000Z'),
+            updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+        } as Collection;
+
+        const result = await CollectionService.share(1, mockCollection);
 
         expect(result).toEqual({
-            shared: false,
-            message: 'Collection sharing canceled.',
-            collection: null,
+            shared: true,
+            message: 'Collection shared successfully.',
+            collection: mockCollection,
         });
-        expect(mockedCollectionRepository.findCollectionById).not.toHaveBeenCalled();
         expect(mockedCollectionRepository.updateCollection).not.toHaveBeenCalled();
     });
 
-    it('does not share the collection when the confirmation dialog is dismissed', async () => {
-        const result = await shareCollection(1, 10, 'Dismiss');
+    it('throws ForbiddenError when a user tries to share a collection they do not own', async () => {
+        const mockCollection = {
+            collectionID: 10,
+            userID: 2,
+            collectionName: 'Biology Review',
+            description: null,
+            visibility: 'private',
+            createdAt: new Date('2026-03-15T00:00:00.000Z'),
+            updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+        } as Collection;
 
-        expect(result).toEqual({
-            shared: false,
-            message: 'Collection sharing dismissed.',
-            collection: null,
-        });
-        expect(mockedCollectionRepository.findCollectionById).not.toHaveBeenCalled();
+        await expect(CollectionService.share(1, mockCollection)).rejects.toThrow(ForbiddenError);
         expect(mockedCollectionRepository.updateCollection).not.toHaveBeenCalled();
     });
 });

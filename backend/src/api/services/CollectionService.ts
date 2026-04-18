@@ -1,7 +1,7 @@
 import Collection, { CollectionCreationAttributes, CollectionUpdateAttributes } from '../models/Collection';
 import CollectionRepository from '../repositories/CollectionRepository';
 import FlashcardService from './FlashcardService';
-import { Express } from 'express';
+import type { Request } from 'express';
 import { AppError, ForbiddenError } from '../../errors';
 import PDFDocument from 'pdfkit';
 import {
@@ -101,7 +101,7 @@ class CollectionService {
     async importFromFile(
         userID: number,
         collection: Collection,
-        file: Express.Multer.File | undefined,
+        file: Request['file'],
     ): Promise<ImportResult> {
         this.ensureOwns(userID, collection);
 

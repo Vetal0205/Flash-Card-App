@@ -7,6 +7,7 @@
         "node": ">=22.0.0"
     },
     "scripts": {
+        "dev": "nodemon --legacy-watch --watch src --ext ts --exec ts-node --files src/index.ts",
         "start": "node .",
         "start-watch": "nodemon --delay 2000ms --exec npm run start",
         "build": "tsc",

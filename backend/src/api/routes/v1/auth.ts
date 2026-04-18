@@ -8,7 +8,7 @@ const router: Router = Router();
 // UC-1: POST /api/v1/auth/login — FR-28
 router.post(
     '/login',
-    body('email').notEmpty().withMessage('Email is required.'),
+    body('credential').notEmpty().withMessage('Email or username is required.'),
     body('password').notEmpty().withMessage('Password is required.'),
     validate,
     AuthController.login

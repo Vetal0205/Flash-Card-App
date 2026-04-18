@@ -9,26 +9,16 @@ jest.mock('../../api/repositories/UserRepository', () => ({
 import UserService from '../../api/services/UserService';
 import UserRepository from '../../api/repositories/UserRepository';
 import { UserOutput } from '../../api/models/User';
-
-type ConfirmationAction = 'Confirm' | 'Cancel' | 'Dismiss';
-
-type DeleteAccountResult = {
-    deleted: boolean;
-    message: string;
-};
+import { AppError } from '../../errors';
 
 describe('UserService deleteAccount', () => {
     const mockedUserRepository = UserRepository as jest.Mocked<typeof UserRepository>;
-    const deleteAccount = UserService.deleteAccount as unknown as (
-        userID: number,
-        confirmation: ConfirmationAction
-    ) => Promise<DeleteAccountResult>;
 
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('deletes the account when the user confirms deletion', async () => {
+    it('deletes the account for an existing user', async () => {
         const mockUser: UserOutput = {
             userID: 1,
             username: 'user1',
@@ -39,7 +29,7 @@ describe('UserService deleteAccount', () => {
         mockedUserRepository.findUserById.mockResolvedValue(mockUser);
         mockedUserRepository.deleteUserById.mockResolvedValue();
 
-        const result = await deleteAccount(1, 'Confirm');
+        const result = await UserService.deleteAccount(1);
 
         expect(result).toEqual({
             deleted: true,
@@ -49,25 +39,16 @@ describe('UserService deleteAccount', () => {
         expect(mockedUserRepository.deleteUserById).toHaveBeenCalledWith(1);
     });
 
-    it('does not delete the account when the user cancels deletion', async () => {
-        const result = await deleteAccount(1, 'Cancel');
+    it('throws AppError when the user does not exist', async () => {
+        mockedUserRepository.findUserById.mockResolvedValue(null);
 
-        expect(result).toEqual({
-            deleted: false,
-            message: 'Account deletion canceled.',
+        await expect(UserService.deleteAccount(999)).rejects.toThrow(AppError);
+        await expect(UserService.deleteAccount(999)).rejects.toMatchObject({
+            message: 'User not found.',
+            statusCode: 404,
         });
-        expect(mockedUserRepository.findUserById).not.toHaveBeenCalled();
-        expect(mockedUserRepository.deleteUserById).not.toHaveBeenCalled();
-    });
 
-    it('does not delete the account when the confirmation dialog is dismissed', async () => {
-        const result = await deleteAccount(1, 'Dismiss');
-
-        expect(result).toEqual({
-            deleted: false,
-            message: 'Account deletion dismissed.',
-        });
-        expect(mockedUserRepository.findUserById).not.toHaveBeenCalled();
+        expect(mockedUserRepository.findUserById).toHaveBeenCalledWith(999);
         expect(mockedUserRepository.deleteUserById).not.toHaveBeenCalled();
     });
 });
