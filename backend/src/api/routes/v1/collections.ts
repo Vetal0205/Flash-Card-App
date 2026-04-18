@@ -5,10 +5,9 @@ import AuthMiddleware from '../../middlewares/AuthMiddleware';
 import CollectionAccessMiddleware from '../../middlewares/CollectionAccessMiddleware';
 import { validate } from '../../middlewares/validator';
 import StudySessionGuardMiddleware from '../../middlewares/StudySessionGuardMiddleware';
+import upload from '../../middlewares/upload';
 import flashcardsRouter from './flashcards';
 import studySessionsRouter from './studySessions';
-
-// TODO: add multer middleware to importFile route (FR-01/22/23)
 
 const router: Router = Router();
 router.use(AuthMiddleware.authenticate.bind(AuthMiddleware));
@@ -45,7 +44,7 @@ router.delete(
 router.post('/:collectionId/share', CollectionController.share.bind(CollectionController));
 
 // UC-10: POST   /api/v1/collections/:collectionId/import  (multipart/form-data)
-router.post('/:collectionId/import', CollectionController.importFile.bind(CollectionController));
+router.post('/:collectionId/import', upload.single('file'), CollectionController.importFile.bind(CollectionController));
 
 // UC-11: GET    /api/v1/collections/:collectionId/export
 router.get('/:collectionId/export', CollectionController.exportPdf.bind(CollectionController));
