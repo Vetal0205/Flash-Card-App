@@ -1,0 +1,8 @@
+[data-theme="dark"] {
+    filter: invert(0.85) hue-rotate(180deg);
+  }
+  
+  [data-theme="dark"] img,
+  [data-theme="dark"] svg {
+    filter: invert(1) hue-rotate(180deg);
+  }

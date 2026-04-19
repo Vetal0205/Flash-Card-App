@@ -51,9 +51,7 @@ export default function FileUploadZone({
         disabled={disabled}
         aria-label="Upload flashcard file"
       />
-      <p style={styles.text}>
-        Drag and drop a file here, or click to browse
-      </p>
+      <p style={styles.text}>Drag and drop a file here, or click to browse</p>
       <p style={styles.hint}>Accepted: {accept}</p>
     </div>
   );
@@ -92,3 +90,4 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: 'none',
   },
 };
+

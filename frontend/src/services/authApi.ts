@@ -5,25 +5,31 @@ export type LoginResult =
   | { ok: false; error: string };
 
 export async function loginRequest(
-  username: string,
-  password: string
+  credential: string,
+  password: string,
+  rememberMe?: boolean
 ): Promise<LoginResult> {
   const res = await fetch(`${apiBase()}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ credential, password, rememberMe }),
   });
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
+    message?: string;
     token?: string;
   };
-  if (res.ok) {
-    return { ok: true, token: data.token ?? 'token' };
+  if (res.ok && data.token) {
+    return { ok: true, token: data.token };
   }
-  return {
-    ok: false,
-    error: data.error ?? 'Could not authenticate',
-  };
+  if (res.ok) {
+    return { ok: false, error: 'No token returned from server.' };
+  }
+  const msg =
+    res.status === 423 || res.status === 429
+      ? (data.message ?? data.error ?? 'Account locked. Too many failed attempts.')
+      : (data.message ?? data.error ?? 'Invalid credentials. Please try again.');
+  return { ok: false, error: msg };
 }
 
 export type RegisterResult = { ok: true } | { ok: false; error: string };

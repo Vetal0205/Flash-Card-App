@@ -14,8 +14,13 @@ import { BadRequestError, CollectionNotFoundError, ForbiddenError } from '../../
 // Routes without :collectionId (GET / list, POST / create) are passed through automatically.
 
 class CollectionAccessMiddleware {
-    async forCollection(req: Request, res: Response, next: NextFunction, collectionId: string): Promise<void> {
-        const id = parseInt(collectionId, 10);
+    async forCollection(req: Request, res: Response, next: NextFunction): Promise<void> {
+        const rawId = req.params.collectionId;
+        if (!rawId) {
+            return next();
+        }
+
+        const id = parseInt(Array.isArray(rawId) ? rawId[0] : rawId, 10);
         if (isNaN(id)) {
             return next(new BadRequestError('collectionId must be a positive integer.'));
         }
