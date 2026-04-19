@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import RenameCollection from '../components/RenameCollection';
+import { useCurrentUser } from '../pages/useCurrentUser';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 interface Collection {
   collectionID: number;
@@ -23,6 +24,7 @@ const Logo = () => (
 
 export default function CollectionsDashboard() {
   const navigate = useNavigate();
+  const { username } = useCurrentUser();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -33,10 +35,21 @@ export default function CollectionsDashboard() {
   const [newCollectionError, setNewCollectionError] = useState("");
   const [renameTarget, setRenameTarget] = useState<Collection | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const [showLogout, setShowLogout] = useState(false);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+  };
+
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/collections`, { credentials: 'include' })
+    fetch(`${API_BASE}/api/v1/collections`, {
+      headers: getAuthHeaders(),
+    })
       .then(res => res.json())
       .then(data => {
         setCollections(Array.isArray(data) ? data : []);
@@ -59,7 +72,7 @@ export default function CollectionsDashboard() {
   }, []);
 
   const filtered = collections.filter((c) =>
-    c.collectionName.toLowerCase().includes(searchQuery.toLowerCase())
+    c?.collectionName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleCreate = () => {
@@ -81,12 +94,22 @@ export default function CollectionsDashboard() {
 
     fetch(`${API_BASE}/api/v1/collections`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify({ collectionName: newCollectionName.trim() }),
     })
-      .then(res => res.json())
-      .then(data => setCollections([data, ...collections]))
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(err => {
+            setNewCollectionError(err.message || "Failed to create collection.");
+          });
+        }
+        return res.json().then(data => {
+          setCollections([data, ...collections]);
+          setNewCollectionName("");
+          setNewCollectionError("");
+          setShowNewModal(false);
+        });
+      })
       .catch(() => {
         const newCol: Collection = {
           collectionID: Date.now(),
@@ -96,11 +119,10 @@ export default function CollectionsDashboard() {
           createdAt: new Date().toISOString().split("T")[0],
         };
         setCollections([newCol, ...collections]);
+        setNewCollectionName("");
+        setNewCollectionError("");
+        setShowNewModal(false);
       });
-
-    setNewCollectionName("");
-    setNewCollectionError("");
-    setShowNewModal(false);
   };
 
   const handleRename = (newName: string) => {
@@ -112,8 +134,7 @@ export default function CollectionsDashboard() {
 
     fetch(`${API_BASE}/api/v1/collections/${renameTarget.collectionID}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify({ collectionName: newName }),
     }).catch(() => {});
 
@@ -127,14 +148,30 @@ export default function CollectionsDashboard() {
     if (!deleteTarget) return;
     fetch(`${API_BASE}/api/v1/collections/${deleteTarget.collectionID}`, {
       method: 'DELETE',
-      credentials: 'include',
-    }).catch(() => {});
-    setCollections(collections.filter((c) => c.collectionID !== deleteTarget.collectionID));
-    setDeleteTarget(null);
+      headers: getAuthHeaders(),
+    })
+      .then(res => {
+        if (res.ok) {
+          setCollections(collections.filter((c) => c.collectionID !== deleteTarget.collectionID));
+          setDeleteTarget(null);
+          setDeleteError("");
+        } else {
+          return res.json().then(err => {
+            setDeleteError(err.message || "Failed to delete collection.");
+          });
+        }
+      })
+      .catch(() => {
+        setDeleteError("Failed to delete collection.");
+      });
   };
 
   const handleLogout = () => {
-    fetch(`${API_BASE}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    fetch(`${API_BASE}/api/v1/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    }).catch(() => {});
+    localStorage.removeItem('token');
     navigate('/');
   };
 
@@ -155,7 +192,7 @@ export default function CollectionsDashboard() {
         </div>
         <div style={styles.navRight}>
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <button style={styles.profileBtn} onClick={() => setShowLogout(!showLogout)}>👤 Profile</button>
+            <button style={styles.profileBtn} onClick={() => setShowLogout(!showLogout)}>👤 {username}</button>
             {showLogout && (
               <div style={styles.dropdown}>
                 <button style={styles.dropdownItem} onClick={() => { setShowLogout(false); navigate('/edit-profile'); }}>Edit Profile</button>
@@ -195,14 +232,14 @@ export default function CollectionsDashboard() {
                   <Logo />
                   <div style={styles.cardInfo}>
                     <p style={styles.cardName}>{col.collectionName}</p>
-                    <p style={styles.cardMeta}>Created {col.createdAt}</p>
+                    <p style={styles.cardMeta}>Created {new Date(col.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div style={styles.cardActions}>
                   <button style={styles.studyBtn} onClick={() => navigate(`/collections/${col.collectionID}/study`)}>Study</button>
-                  <button style={styles.difficultBtn} onClick={() => navigate('/difficult-flashcards')}>Difficult</button>
+                  <button style={styles.difficultBtn} onClick={() => navigate('/difficult-flashcards', { state: { collectionId: col.collectionID } })}>Difficult</button>
                   <button style={styles.actionBtn} onClick={() => setRenameTarget(col)}>Rename</button>
-                  <button style={styles.deleteBtn} onClick={() => setDeleteTarget(col)}>Delete</button>
+                  <button style={styles.deleteBtn} onClick={() => { setDeleteTarget(col); setDeleteError(""); }}>Delete</button>
                 </div>
               </div>
             ))}
@@ -250,9 +287,10 @@ export default function CollectionsDashboard() {
             <p style={styles.deleteMsg}>
               Are you sure you want to delete <strong>"{deleteTarget.collectionName}"</strong>? This cannot be undone.
             </p>
+            {deleteError && <p style={styles.modalError}>{deleteError}</p>}
             <div style={styles.modalBtns}>
               <button style={{ ...styles.saveBtn, backgroundColor: '#c0392b' }} onClick={handleDelete}>Delete</button>
-              <button style={styles.cancelBtn} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button style={styles.cancelBtn} onClick={() => { setDeleteTarget(null); setDeleteError(""); }}>Cancel</button>
             </div>
           </div>
         </div>

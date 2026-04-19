@@ -1,11 +1,14 @@
 // Flashcard List Page
 // UC4: Study button, UC13: Search, UC14: Add flashcard, UC16: Share
-// UC10 (Import - Aaliyan) and UC11 (Export - Aaliyan) 
+// UC10 (Import - Aaliyan) and UC11 (Export - Aaliyan)
+// Shows all flashcards inside a specific collection
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import FileUploadZone from '../components/FileUploadZone';
+import { useCurrentUser } from '../pages/useCurrentUser';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Logo = () => (
   <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -24,11 +27,13 @@ interface Flashcard {
 
 export default function FlashcardList() {
   const navigate = useNavigate();
+  const { username } = useCurrentUser();
   const { collectionId } = useParams();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [collectionName, setCollectionName] = useState("My Collection");
+  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -44,12 +49,35 @@ export default function FlashcardList() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [shareCopied, setShareCopied] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+  };
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/flashcards?collectionId=${collectionId}`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        setFlashcards(Array.isArray(data) ? data : []);
+    const token = localStorage.getItem('token');
+    const headers = token ? getAuthHeaders() : { 'Content-Type': 'application/json' };
+
+    Promise.all([
+      fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards/flagged`, { headers }).then(r => r.json()),
+    ])
+      .then(([allCards, flaggedCards]) => {
+        const flaggedIds = new Set(Array.isArray(flaggedCards) ? flaggedCards.map((f: any) => f.flashcardID) : []);
+        const mapped = Array.isArray(allCards) ? allCards.map((f: any) => ({
+          ...f,
+          isFlaggedDifficult: flaggedIds.has(f.flashcardID),
+        })) : [];
+        setFlashcards(mapped);
         setLoading(false);
       })
       .catch(() => {
@@ -57,13 +85,20 @@ export default function FlashcardList() {
         setLoading(false);
       });
 
-    fetch(`${API_BASE}/api/v1/collections`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        const col = Array.isArray(data) ? data.find((c: any) => c.collectionID === Number(collectionId)) : null;
-        if (col) setCollectionName(col.collectionName);
-      })
-      .catch(() => {});
+    if (token) {
+      fetch(`${API_BASE}/api/v1/collections`, { headers: getAuthHeaders() })
+        .then(res => res.json())
+        .then(data => {
+          const col = Array.isArray(data) ? data.find((c: any) => c.collectionID === Number(collectionId)) : null;
+          if (col) {
+            setCollectionName(col.collectionName);
+            setIsOwner(true);
+          } else {
+            setIsOwner(false);
+          }
+        })
+        .catch(() => {});
+    }
   }, [collectionId]);
 
   useEffect(() => {
@@ -86,14 +121,13 @@ export default function FlashcardList() {
       setAddError("Both question and answer are required.");
       return;
     }
-    fetch(`${API_BASE}/api/v1/flashcards`, {
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ collectionID: Number(collectionId), question: newQuestion.trim(), answer: newAnswer.trim() }),
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ question: newQuestion.trim(), answer: newAnswer.trim() }),
     })
       .then(res => res.json())
-      .then(data => setFlashcards([...flashcards, data]))
+      .then(data => setFlashcards([...flashcards, { ...data, isFlaggedDifficult: false }]))
       .catch(() => {
         setFlashcards([...flashcards, {
           flashcardID: Date.now(),
@@ -110,9 +144,9 @@ export default function FlashcardList() {
   };
 
   const handleToggleDifficult = (card: Flashcard) => {
-    fetch(`${API_BASE}/api/v1/flashcards/${card.flashcardID}/flag`, {
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards/${card.flashcardID}/flag`, {
       method: 'PATCH',
-      credentials: 'include',
+      headers: getAuthHeaders(),
     }).catch(() => {});
     setFlashcards(flashcards.map((f) =>
       f.flashcardID === card.flashcardID ? { ...f, isFlaggedDifficult: !f.isFlaggedDifficult } : f
@@ -121,9 +155,9 @@ export default function FlashcardList() {
 
   const handleDelete = () => {
     if (!showDeleteConfirm) return;
-    fetch(`${API_BASE}/api/v1/flashcards/${showDeleteConfirm.flashcardID}`, {
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards/${showDeleteConfirm.flashcardID}`, {
       method: 'DELETE',
-      credentials: 'include',
+      headers: getAuthHeaders(),
     }).catch(() => {});
     setFlashcards(flashcards.filter((f) => f.flashcardID !== showDeleteConfirm.flashcardID));
     setShowDeleteConfirm(null);
@@ -141,10 +175,9 @@ export default function FlashcardList() {
       setEditError("Both fields are required.");
       return;
     }
-    fetch(`${API_BASE}/api/v1/flashcards/${showEditModal?.flashcardID}`, {
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards/${showEditModal?.flashcardID}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify({ question: editQuestion.trim(), answer: editAnswer.trim() }),
     }).catch(() => {});
     setFlashcards(flashcards.map((f) =>
@@ -156,18 +189,26 @@ export default function FlashcardList() {
   };
 
   const handleLogout = () => {
-    fetch(`${API_BASE}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    fetch(`${API_BASE}/api/v1/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    }).catch(() => {});
+    localStorage.removeItem('token');
     navigate('/');
   };
 
-  const handleShare = () => {
-    const link = `${window.location.origin}/collections/${collectionId}`;
+  const handleShare = async () => {
+    try {
+      await fetch(`${API_BASE}/api/v1/collections/${collectionId}/share`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+    } catch {
+      /* non-blocking */
+    }
+    const link = `${window.location.origin}/share/${collectionId}`;
     setShareLink(link);
     setShowShareModal(true);
-    fetch(`${API_BASE}/api/v1/collections/${collectionId}/share`, {
-      method: 'POST',
-      credentials: 'include',
-    }).catch(() => {});
   };
 
   const handleCopyLink = () => {
@@ -177,10 +218,131 @@ export default function FlashcardList() {
     });
   };
 
+  const handleImport = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    setImporting(true);
+    setImportError("");
+    const token = localStorage.getItem('token');
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/import`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    })
+      .then(res => {
+        if (!res.ok) return res.json().then(err => { setImportError(err.message || "Import failed."); });
+        return res.json().then(() => {
+          Promise.all([
+            fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards`, { headers: getAuthHeaders() }).then(r => r.json()),
+            fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards/flagged`, { headers: getAuthHeaders() }).then(r => r.json()),
+          ]).then(([allCards, flaggedCards]) => {
+            const flaggedIds = new Set(Array.isArray(flaggedCards) ? flaggedCards.map((f: any) => f.flashcardID) : []);
+            const mapped = Array.isArray(allCards) ? allCards.map((f: any) => ({
+              ...f,
+              isFlaggedDifficult: flaggedIds.has(f.flashcardID),
+            })) : [];
+            setFlashcards(mapped);
+            setShowImportModal(false);
+          });
+        });
+      })
+      .catch(() => setImportError("Import failed."))
+      .finally(() => setImporting(false));
+  };
+
   if (loading) {
     return (
       <div style={styles.page}>
         <div style={{ textAlign: 'center', paddingTop: '80px', color: '#888' }}>Loading flashcards...</div>
+      </div>
+    );
+  }
+
+  const token = localStorage.getItem('token');
+
+  const Navbar = () => (
+    <nav style={styles.navbar}>
+      <div style={styles.navBrand}>
+        <Logo />
+        <span style={styles.navTitle}>MindDeck</span>
+      </div>
+      <div style={styles.navRight}>
+        {token ? (
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 {username}</button>
+            {showProfileMenu && (
+              <div style={styles.dropdown}>
+                <button style={styles.dropdownItem} onClick={() => { setShowProfileMenu(false); navigate('/edit-profile'); }}>Edit Profile</button>
+                <button style={{ ...styles.dropdownItem, color: '#c0392b' }} onClick={handleLogout}>Log Out</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button style={styles.profileBtn} onClick={() => navigate('/')}>Sign In</button>
+        )}
+      </div>
+    </nav>
+  );
+
+  if (!isOwner) {
+    const totalCards = flashcards.length;
+    const currentCard = flashcards[currentIndex];
+    const progress = totalCards > 0 ? Math.round(((currentIndex + 1) / totalCards) * 100) : 0;
+
+    return (
+      <div style={styles.page}>
+        <Navbar />
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '32px 16px' }}>
+          {token && (
+            <button style={styles.backBtn} type="button" onClick={() => navigate('/collections')}>← Back to Collections</button>
+          )}
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a1a', marginBottom: '4px', marginTop: '0' }}>{collectionName}</h2>
+          <p style={{ fontSize: '14px', color: '#888', fontFamily: 'sans-serif', marginBottom: '8px' }}>Shared collection — {totalCards} cards</p>
+
+          <div style={{ backgroundColor: '#fef9e7', border: '1px solid #f9e79f', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', fontFamily: 'sans-serif', color: '#7d6608', marginBottom: '20px' }}>
+            👁 You are viewing a shared collection in read-only mode.
+          </div>
+
+          {totalCards === 0 ? (
+            <p style={{ color: '#aaa', fontFamily: 'sans-serif', textAlign: 'center', paddingTop: '40px' }}>No flashcards in this collection yet.</p>
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: '#888', fontFamily: 'sans-serif' }}>Card {currentIndex + 1} of {totalCards}</span>
+                <span style={{ fontSize: '13px', color: '#888', fontFamily: 'sans-serif' }}>{progress}%</span>
+              </div>
+              <div style={{ width: '100%', height: '6px', backgroundColor: '#e0ddd6', borderRadius: '999px', marginBottom: '16px' }}>
+                <div style={{ height: '6px', backgroundColor: '#6b8f71', borderRadius: '999px', width: `${progress}%`, transition: 'width 0.3s ease' }} />
+              </div>
+
+              <p style={{ fontSize: '13px', color: '#aaa', textAlign: 'center', marginBottom: '12px', fontFamily: 'sans-serif' }}>Click card to reveal answer</p>
+
+              <div
+                style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '48px 32px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', cursor: 'pointer', minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', border: '1px solid #e0ddd6', textAlign: 'center' }}
+                onClick={() => setIsFlipped(!isFlipped)}
+              >
+                <p style={{ fontSize: '11px', color: '#aaa', letterSpacing: '1px', fontFamily: 'sans-serif', marginBottom: '16px' }}>{isFlipped ? 'ANSWER' : 'QUESTION'}</p>
+                <p style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a1a', marginBottom: '12px' }}>{isFlipped ? currentCard.answer : currentCard.question}</p>
+                {!isFlipped && <p style={{ fontSize: '13px', color: '#aaa', fontFamily: 'sans-serif' }}>Click to flip</p>}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+                <button
+                  style={{ backgroundColor: '#ffffff', border: '1px solid #ddd', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', color: '#333', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', fontFamily: 'sans-serif', opacity: currentIndex === 0 ? 0.4 : 1 }}
+                  onClick={() => { if (currentIndex > 0) { setCurrentIndex(currentIndex - 1); setIsFlipped(false); } }}
+                  disabled={currentIndex === 0}
+                >← Previous</button>
+                <button
+                  style={{ backgroundColor: '#ffffff', border: '1px solid #ddd', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', color: '#333', cursor: currentIndex === totalCards - 1 ? 'not-allowed' : 'pointer', fontFamily: 'sans-serif', opacity: currentIndex === totalCards - 1 ? 0.4 : 1 }}
+                  onClick={() => { if (currentIndex < totalCards - 1) { setCurrentIndex(currentIndex + 1); setIsFlipped(false); } }}
+                  disabled={currentIndex === totalCards - 1}
+                >Next →</button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -194,7 +356,7 @@ export default function FlashcardList() {
         </div>
         <div style={styles.navRight}>
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 Profile</button>
+            <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 {username}</button>
             {showProfileMenu && (
               <div style={styles.dropdown}>
                 <button style={styles.dropdownItem} onClick={() => { setShowProfileMenu(false); navigate('/edit-profile'); }}>Edit Profile</button>
@@ -206,7 +368,7 @@ export default function FlashcardList() {
       </nav>
 
       <div style={styles.container}>
-        <button style={styles.backBtn} onClick={() => navigate('/collections')}>← Back to Collections</button>
+        <button style={styles.backBtn} type="button" onClick={() => navigate('/collections')}>← Back to Collections</button>
         <div style={styles.headerRow}>
           <h2 style={styles.heading}>{collectionName}</h2>
           <button style={styles.addBtn} onClick={() => setShowAddModal(true)}>+ Add Flashcard</button>
@@ -214,11 +376,23 @@ export default function FlashcardList() {
 
         <div style={styles.actionRow}>
           <button style={styles.studyBtn} onClick={() => navigate(`/collections/${collectionId}/study`)}>Study</button>
-          <button style={styles.difficultBtn} onClick={() => navigate('/difficult-flashcards')}>Study Difficult</button>
-          {/* UC10 - Import placeholder   */}
-          <button style={styles.outlineBtn}>⬆ Import</button>
-          {/* UC11 - Export placeholder  */}
-          <button style={styles.outlineBtn}>⬇ Export PDF</button>
+          <button style={styles.difficultBtn} onClick={() => navigate('/difficult-flashcards', { state: { collectionId } })}>Study Difficult</button>
+          <button style={styles.outlineBtn} onClick={() => setShowImportModal(true)}>⬆ Import</button>
+          <button style={styles.outlineBtn} onClick={() => {
+            const token = localStorage.getItem('token');
+            fetch(`${API_BASE}/api/v1/collections/${collectionId}/export`, {
+              headers: { 'Authorization': `Bearer ${token}` },
+            })
+              .then(res => res.blob())
+              .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `collection-${collectionId}.pdf`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+              });
+          }}>⬇ Export PDF</button>
           <button style={styles.outlineBtn} onClick={handleShare}>🔗 Share</button>
         </div>
 
@@ -275,7 +449,22 @@ export default function FlashcardList() {
         <p style={styles.countLabel}>{filtered.length} flashcard{filtered.length !== 1 ? 's' : ''}</p>
       </div>
 
-      {/* Add Flashcard Modal */}
+      {showImportModal && (
+        <div style={styles.overlay}>
+          <div style={styles.modal}>
+            <h3 style={styles.modalTitle}>Import Flashcards</h3>
+            <p style={{ fontSize: '14px', color: '#555', fontFamily: 'sans-serif', marginBottom: '16px' }}>
+              Upload a CSV, JSON, or TXT file to import flashcards.
+            </p>
+            <FileUploadZone onFilesSelected={handleImport} disabled={importing} />
+            {importError && <p style={styles.modalError}>{importError}</p>}
+            <div style={styles.modalBtns}>
+              <button style={styles.cancelBtn} onClick={() => { setShowImportModal(false); setImportError(""); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
@@ -293,7 +482,6 @@ export default function FlashcardList() {
         </div>
       )}
 
-      {/* Edit Flashcard Modal */}
       {showEditModal && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
@@ -311,13 +499,11 @@ export default function FlashcardList() {
         </div>
       )}
 
-      {/* Delete Flashcard Modal */}
       {showDeleteConfirm && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
             <h3 style={styles.modalTitle}>Delete Flashcard</h3>
             <p style={styles.deleteMsg}>Are you sure you want to delete this flashcard? This cannot be undone.</p>
-            <p style={styles.deletePreview}>"{showDeleteConfirm.question}"</p>
             <div style={styles.modalBtns}>
               <button style={{ ...styles.saveBtn, backgroundColor: '#c0392b' }} onClick={handleDelete}>Delete</button>
               <button style={styles.cancelBtn} onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
@@ -326,12 +512,11 @@ export default function FlashcardList() {
         </div>
       )}
 
-      {/* Share Modal */}
       {showShareModal && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
             <h3 style={styles.modalTitle}>Share Collection</h3>
-            <p style={styles.deleteMsg}>This collection is now public. Share the link below with anyone.</p>
+            <p style={styles.deleteMsg}>Share this link with anyone — no login required to view.</p>
             <label style={styles.modalLabel}>SHARE LINK</label>
             <div style={styles.shareLinkRow}>
               <input
@@ -368,6 +553,7 @@ const styles: Record<string, React.CSSProperties> = {
   headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
   heading: { fontSize: '22px', fontWeight: 'bold', color: '#1a1a1a', margin: '0' },
   addBtn: { backgroundColor: '#6b8f71', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'sans-serif' },
+  viewerBanner: { backgroundColor: '#fef9e7', border: '1px solid #f9e79f', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', fontFamily: 'sans-serif', color: '#7d6608', marginBottom: '16px' },
   actionRow: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' },
   studyBtn: { backgroundColor: '#6b8f71', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'sans-serif' },
   difficultBtn: { backgroundColor: '#fde8e8', color: '#c0392b', border: '1px solid #f5c6c6', borderRadius: '8px', padding: '8px 18px', fontSize: '13px', cursor: 'pointer', fontFamily: 'sans-serif' },
@@ -393,7 +579,6 @@ const styles: Record<string, React.CSSProperties> = {
   saveBtn: { flex: 1, backgroundColor: '#6b8f71', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'sans-serif' },
   cancelBtn: { flex: 1, backgroundColor: '#ffffff', color: '#555', border: '1px solid #ddd', borderRadius: '8px', padding: '10px', fontSize: '14px', cursor: 'pointer', fontFamily: 'sans-serif' },
   deleteMsg: { fontSize: '14px', color: '#555', fontFamily: 'sans-serif', lineHeight: '1.6', margin: '0 0 8px 0' },
-  deletePreview: { fontSize: '13px', color: '#888', fontFamily: 'sans-serif', fontStyle: 'italic', margin: '0 0 8px 0' },
   shareLinkRow: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' },
   copyBtn: { backgroundColor: '#6b8f71', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '10px 16px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'sans-serif', whiteSpace: 'nowrap' },
 };

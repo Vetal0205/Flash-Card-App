@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PauseSession from '../components/PauseSession';
+import { useCurrentUser } from '../pages/useCurrentUser';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Logo = () => (
   <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -23,6 +24,8 @@ const shuffle = (arr: Flashcard[]) => [...arr].sort(() => Math.random() - 0.5);
 
 export default function StudyMode() {
   const navigate = useNavigate();
+  const { username } = useCurrentUser();
+
   const { collectionId } = useParams();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -37,8 +40,16 @@ export default function StudyMode() {
   const [isComplete, setIsComplete] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+  };
+
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/flashcards?collectionId=${collectionId}`, { credentials: 'include' })
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards`, { headers: getAuthHeaders() })
       .then(res => res.json())
       .then(data => {
         setCards(shuffle(Array.isArray(data) && data.length > 0 ? data : []));
@@ -49,7 +60,7 @@ export default function StudyMode() {
         setLoading(false);
       });
 
-    fetch(`${API_BASE}/api/v1/collections`, { credentials: 'include' })
+    fetch(`${API_BASE}/api/v1/collections`, { headers: getAuthHeaders() })
       .then(res => res.json())
       .then(data => {
         const col = Array.isArray(data) ? data.find((c: any) => c.collectionID === Number(collectionId)) : null;
@@ -93,7 +104,11 @@ export default function StudyMode() {
   };
 
   const handleLogout = () => {
-    fetch(`${API_BASE}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    fetch(`${API_BASE}/api/v1/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    }).catch(() => {});
+    localStorage.removeItem('token');
     navigate('/');
   };
 
@@ -133,7 +148,7 @@ export default function StudyMode() {
           <button style={styles.pauseBtn} onClick={() => setIsPaused(true)}>⏸ Pause</button>
           <button style={styles.exitBtn} onClick={() => navigate(`/collections/${collectionId}`)}>Exit Study</button>
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 Profile</button>
+            <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 {username}</button>
             {showProfileMenu && (
               <div style={styles.dropdown}>
                 <button style={styles.dropdownItem} onClick={() => { setShowProfileMenu(false); navigate('/edit-profile'); }}>Edit Profile</button>
