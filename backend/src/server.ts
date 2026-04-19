@@ -4,6 +4,7 @@ import cors from 'cors';
 import AppConfig from './config/appConfig';
 import routesV1 from './api/routes/v1';
 import { db } from './database/config';
+import './api/models';
 import { AppError, BadRequestError } from './errors';
 
 export function createServer(): Application {
