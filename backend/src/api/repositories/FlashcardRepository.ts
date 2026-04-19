@@ -59,7 +59,7 @@ class FlashcardRepository {
     }
 
     // Creates initial UserFlashcardProgress row when a user first encounters a flashcard
-    async createFlashcardProgress(data: UserFlashcardProgressCreationAttributes): Promise<UserFlashcardProgress> {
+    async findOrCreateFlashcardProgress(data: UserFlashcardProgressCreationAttributes): Promise<UserFlashcardProgress> {
         const [progress] = await UserFlashcardProgress.findOrCreate({
             where: { userID: data.userID, flashcardID: data.flashcardID },
             defaults: data,
@@ -71,6 +71,10 @@ class FlashcardRepository {
         await UserFlashcardProgress.update(data, {
             where: { userID, flashcardID },
         });
+    }
+
+    async incrementFlashcardProgress(userID: number, flashcardID: number, field: 'knownCount' | 'unknownCount'): Promise<void> {
+        await UserFlashcardProgress.increment(field, { by: 1, where: { userID, flashcardID } });
     }
 
     async deleteFlashcardById(id: number): Promise<void> {

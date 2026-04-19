@@ -1,7 +1,7 @@
 import FlashcardRepository from '../repositories/FlashcardRepository';
 import Collection from '../models/Collection';
 import Flashcard, { FlashcardCreationAttributes, FlashcardUpdateAttributes } from '../models/Flashcard';
-import { UserFlashcardProgressUpdateAttributes } from '../models/UserFlashcardProgress';
+import UserFlashcardProgress, { UserFlashcardProgressCreationAttributes, UserFlashcardProgressUpdateAttributes } from '../models/UserFlashcardProgress';
 import { AppError, ForbiddenError } from '../../errors';
 
 // Business logic for individual flashcards
@@ -109,6 +109,10 @@ class FlashcardService {
         });
     }
 
+    async findOrCreateProgress(data: UserFlashcardProgressCreationAttributes): Promise<UserFlashcardProgress> {
+        return FlashcardRepository.findOrCreateFlashcardProgress(data);
+    }
+
     async toggleFlag(userID: number, collection: Collection, flashcardID: number): Promise<void> {
         // FR-11: flag is per-user; any collection member can flag (read access sufficient).
         const flashcard = await FlashcardRepository.findFlashcardById(flashcardID);
@@ -116,11 +120,7 @@ class FlashcardService {
             throw new AppError('Flashcard not found.', 404);
         }
 
-        // FR-11: toggle per-user difficult flag.
-        const progress = await FlashcardRepository.createFlashcardProgress({
-            userID,
-            flashcardID,
-        });
+        const progress = await this.findOrCreateProgress({ userID, flashcardID });
 
         await FlashcardRepository.updateFlashcardProgress(userID, flashcardID, {
             isFlaggedDifficult: !progress.isFlaggedDifficult,
@@ -133,8 +133,11 @@ class FlashcardService {
             throw new AppError('Flashcard not found.', 404);
         }
 
-        await FlashcardRepository.createFlashcardProgress({ userID, flashcardID });
         await FlashcardRepository.updateFlashcardProgress(userID, flashcardID, data);
+    }
+
+    async incrementProgress(userID: number, flashcardID: number, field: 'knownCount' | 'unknownCount'): Promise<void> {
+        await FlashcardRepository.incrementFlashcardProgress(userID, flashcardID, field);
     }
 
     async delete(userID: number, collection: Collection, flashcardID: number): Promise<void> {

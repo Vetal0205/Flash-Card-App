@@ -10,16 +10,17 @@ interface StudySessionAttributes {
     status: 'active' | 'completed' | 'paused';
     currentIndex: number;
     startedAt: Date;
+    resumedAt: Date | null;
     pausedAt: Date | null;
     completedAt: Date | null;
     durationSeconds: number;
 }
 // Optional fields for creation and update, because either can be auto-generated or not required
-export type StudySessionCreationAttributes = Optional<StudySessionAttributes, 
-    'sessionID' | 'status' | 'currentIndex' | 'startedAt' | 'pausedAt' | 'completedAt' | 'durationSeconds'>;
-// Picked fields for update, because only status, currentIndex, pausedAt, completedAt and durationSeconds can be updated
+export type StudySessionCreationAttributes = Optional<StudySessionAttributes,
+    'sessionID' | 'status' | 'currentIndex' | 'startedAt' | 'resumedAt' | 'pausedAt' | 'completedAt' | 'durationSeconds'>;
+// Picked fields for update, because only status, currentIndex, resumedAt, pausedAt, completedAt and durationSeconds can be updated
 export type StudySessionUpdateAttributes = Partial<
-    Pick<StudySessionAttributes, 'status' | 'currentIndex' | 'pausedAt' | 'completedAt' | 'durationSeconds'>
+    Pick<StudySessionAttributes, 'status' | 'currentIndex' | 'resumedAt' | 'pausedAt' | 'completedAt' | 'durationSeconds'>
 >;
 
 class StudySession extends Model<StudySessionAttributes, StudySessionCreationAttributes>
@@ -30,6 +31,7 @@ class StudySession extends Model<StudySessionAttributes, StudySessionCreationAtt
         declare status: 'active' | 'completed' | 'paused';
         declare currentIndex: number;
         declare startedAt: Date;
+        declare resumedAt: Date | null;
         declare pausedAt: Date | null;
         declare completedAt: Date | null;
         declare durationSeconds: number;
@@ -77,6 +79,10 @@ StudySession.init(
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: DataTypes.NOW,
+        },
+        resumedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
         },
         pausedAt: {
             type: DataTypes.DATE,

@@ -1,49 +1,76 @@
+import { Op } from 'sequelize';
 import StudySession, { StudySessionCreationAttributes, StudySessionUpdateAttributes } from '../models/StudySession';
 import StudySessionCardOrder, { StudySessionCardOrderCreationAttributes } from '../models/StudySessionCardOrder';
 import StudySessionResponse, { StudySessionResponseCreationAttributes } from '../models/StudySessionResponse';
 
 // Data access for StudySession, StudySessionResponse, StudySessionCardOrder
-// Called by: StudySessionService
-// FR-19: pause/resume; 
-// FR-20: summary; 
+// Called by: StudySessionService, StudySessionGuardMiddleware
+// FR-19: pause/resume;
+// FR-20: summary;
 // NFR-05/06: restore within 2s with 99% reliability
 
 class StudySessionRepository {
-    // TODO: implement each method
-
     async createSession(data: StudySessionCreationAttributes): Promise<StudySession> {
-        throw new Error('Not implemented');
+        return StudySession.create(data);
     }
 
-    async findActiveSessionByUser(userID: number): Promise<StudySession | null> {
-        throw new Error('Not implemented');
+    async findActiveSessionByCollection(userID: number, collectionID: number): Promise<StudySession | null> {
+        return StudySession.findOne({
+            where: { userID, collectionID, status: ['active', 'paused'] },
+        });
     }
 
     async findSessionById(id: number): Promise<StudySession | null> {
-        throw new Error('Not implemented');
+        return StudySession.findByPk(id);
     }
 
-    // Covers pause (status/pausedAt), resume (status/pausedAt), complete (status/completedAt/durationSeconds)
+    // Covers pause (status/pausedAt), resume (status/resumedAt), complete (status/completedAt/durationSeconds)
     async updateSession(id: number, data: StudySessionUpdateAttributes): Promise<void> {
-        throw new Error('Not implemented');
+        await StudySession.update(data, { where: { sessionID: id } });
     }
 
     // Bulk-inserts the randomized card order when a session starts (FR-10)
     async createCardOrder(cards: StudySessionCardOrderCreationAttributes[]): Promise<void> {
-        throw new Error('Not implemented');
+        await StudySessionCardOrder.bulkCreate(cards);
     }
 
-    // Retrieves card order for session restore (NFR-05/06)
+    // Retrieves card order sorted by sequenceNumber for session restore (NFR-05/06)
     async getCardOrder(sessionID: number): Promise<StudySessionCardOrder[]> {
-        throw new Error('Not implemented');
+        return StudySessionCardOrder.findAll({
+            where: { sessionID },
+            order: [['sequenceNumber', 'ASC']],
+        });
     }
 
     async recordAnswer(data: StudySessionResponseCreationAttributes): Promise<StudySessionResponse> {
-        throw new Error('Not implemented');
+        return StudySessionResponse.create(data);
     }
 
     async getSummary(sessionID: number): Promise<StudySessionResponse[]> {
-        throw new Error('Not implemented');
+        return StudySessionResponse.findAll({
+            where: { sessionID },
+        });
+    }
+
+    // async moveCardToEndOfOrder(sessionID: number, sequenceNumber: number): Promise<void> {}
+
+    async hasActiveSessionForCollection(collectionID: number): Promise<boolean> {
+        const count = await StudySession.count({
+            where: { collectionID, status: ['active', 'paused'] },
+        });
+        return count > 0;
+    }
+
+    async hasActiveSessionForFlashcard(flashcardID: number): Promise<boolean> {
+        const count = await StudySessionCardOrder.count({
+            where: { flashcardID },
+            include: [{
+                model: StudySession,
+                where: { status: ['active', 'paused'] },
+                required: true,
+            }],
+        });
+        return count > 0;
     }
 }
 

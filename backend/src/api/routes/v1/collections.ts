@@ -4,17 +4,20 @@ import CollectionController from '../../controllers/CollectionController';
 import AuthMiddleware from '../../middlewares/AuthMiddleware';
 import CollectionAccessMiddleware from '../../middlewares/CollectionAccessMiddleware';
 import { validate } from '../../middlewares/validator';
+import StudySessionGuardMiddleware from '../../middlewares/StudySessionGuardMiddleware';
+import upload from '../../middlewares/upload';
 import flashcardsRouter from './flashcards';
 import studySessionsRouter from './studySessions';
 
-// TODO: add multer middleware to importFile route (FR-01/22/23)
-
 const router: Router = Router();
 router.use(AuthMiddleware.authenticate.bind(AuthMiddleware));
-router.use(CollectionAccessMiddleware.forCollection.bind(CollectionAccessMiddleware));
+router.param('collectionId', CollectionAccessMiddleware.forCollection.bind(CollectionAccessMiddleware));
 
 // UC-3:  GET    /api/v1/collections
 router.get('/', CollectionController.getAll.bind(CollectionController));
+
+// GET    /api/v1/collections/public?page=1&limit=30
+router.get('/public', CollectionController.getPublic.bind(CollectionController));
 
 // UC-3:  POST   /api/v1/collections
 router.post(
@@ -34,13 +37,17 @@ router.patch(
 );
 
 // UC-5:  DELETE /api/v1/collections/:collectionId
-router.delete('/:collectionId', CollectionController.delete.bind(CollectionController));
+router.delete(
+    '/:collectionId',
+    StudySessionGuardMiddleware.noActiveSessionForCollection.bind(StudySessionGuardMiddleware),
+    CollectionController.delete.bind(CollectionController)
+);
 
 // UC-16: POST   /api/v1/collections/:collectionId/share
 router.post('/:collectionId/share', CollectionController.share.bind(CollectionController));
 
 // UC-10: POST   /api/v1/collections/:collectionId/import  (multipart/form-data)
-router.post('/:collectionId/import', CollectionController.importFile.bind(CollectionController));
+router.post('/:collectionId/import', upload.single('file'), CollectionController.importFile.bind(CollectionController));
 
 // UC-11: GET    /api/v1/collections/:collectionId/export
 router.get('/:collectionId/export', CollectionController.exportPdf.bind(CollectionController));

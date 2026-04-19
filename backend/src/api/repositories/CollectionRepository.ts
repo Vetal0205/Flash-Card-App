@@ -19,6 +19,19 @@ class CollectionRepository {
         return Collection.findByPk(id);
     }
 
+    async findByNameAndUser(userID: number, collectionName: string): Promise<Collection | null> {
+        return Collection.findOne({ where: { userID, collectionName } });
+    }
+
+    async findAllPublicCollections(limit: number, offset: number): Promise<{ rows: Collection[]; count: number }> {
+        return Collection.findAndCountAll({
+            where: { visibility: 'public' },
+            order: [['updatedAt', 'DESC']],
+            limit,
+            offset,
+        });
+    }
+
     async createCollection(data: CollectionCreationAttributes): Promise<Collection> {
         return Collection.create(data);
     }

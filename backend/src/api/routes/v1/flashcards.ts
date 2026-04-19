@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import FlashcardController from '../../controllers/FlashcardController';
+import StudySessionGuardMiddleware from '../../middlewares/StudySessionGuardMiddleware';
 import { validate } from '../../middlewares/validator';
 
 // Mounted at /collections/:collectionId/flashcards — collection context and access
@@ -67,6 +68,7 @@ router.delete(
     '/:flashcardId',
     flashcardIdParam,
     validate,
+    StudySessionGuardMiddleware.noActiveSessionForFlashcard.bind(StudySessionGuardMiddleware),
     FlashcardController.delete.bind(FlashcardController)
 );
 

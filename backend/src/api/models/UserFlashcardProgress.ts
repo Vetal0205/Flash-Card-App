@@ -12,9 +12,9 @@ interface UserFlashcardProgressAttributes {
 }
 // Optional fields for creation and update, because either can be auto-generated or not required
 export type UserFlashcardProgressCreationAttributes = Optional<UserFlashcardProgressAttributes, 'knownCount' | 'unknownCount' | 'isFlaggedDifficult' | 'updatedAt'>;
-// Optional fields for update, because only knownCount, unknownCount and isFlaggedDifficult can be updated
+// Counts are mutated only via atomic increments — not settable through bulk update
 export type UserFlashcardProgressUpdateAttributes = Partial<
-    Pick<UserFlashcardProgressAttributes, 'knownCount' | 'unknownCount' | 'isFlaggedDifficult'>
+    Pick<UserFlashcardProgressAttributes, 'isFlaggedDifficult'>
 >;
 class UserFlashcardProgress extends Model<UserFlashcardProgressAttributes, UserFlashcardProgressCreationAttributes>  
     implements UserFlashcardProgressAttributes {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { param } from 'express-validator';
+import { body, param } from 'express-validator';
 import StudySessionController from '../../controllers/StudySessionController';
+import SessionAccessMiddleware from '../../middlewares/SessionAccessMiddleware';
 import { validate } from '../../middlewares/validator';
 
 // Mounted at /collections/:collectionId/study-sessions — collection context and access
@@ -9,9 +10,16 @@ import { validate } from '../../middlewares/validator';
 
 const router: Router = Router({ mergeParams: true });
 
+router.param('sessionId', SessionAccessMiddleware.forSession.bind(SessionAccessMiddleware));
+
 const sessionIdParam = param('sessionId')
     .isInt({ min: 1 })
     .withMessage('sessionId must be a positive integer.');
+
+const sessionAccess = [
+    sessionIdParam,
+    validate,
+];
 
 // UC-4:  POST  /api/v1/collections/:collectionId/study-sessions
 router.post('/', StudySessionController.start.bind(StudySessionController));
@@ -20,21 +28,28 @@ router.post('/', StudySessionController.start.bind(StudySessionController));
 router.get('/active', StudySessionController.getActive.bind(StudySessionController));
 
 // GET   /api/v1/collections/:collectionId/study-sessions/:sessionId
-router.get('/:sessionId', sessionIdParam, validate, StudySessionController.getById.bind(StudySessionController));
+router.get('/:sessionId', ...sessionAccess, StudySessionController.getById.bind(StudySessionController));
 
 // UC-9:  PATCH /api/v1/collections/:collectionId/study-sessions/:sessionId/pause
-router.patch('/:sessionId/pause', sessionIdParam, validate, StudySessionController.pause.bind(StudySessionController));
+router.patch('/:sessionId/pause', ...sessionAccess, StudySessionController.pause.bind(StudySessionController));
 
 // UC-9:  PATCH /api/v1/collections/:collectionId/study-sessions/:sessionId/resume
-router.patch('/:sessionId/resume', sessionIdParam, validate, StudySessionController.resume.bind(StudySessionController));
+router.patch('/:sessionId/resume', ...sessionAccess, StudySessionController.resume.bind(StudySessionController));
 
 // FR-16: POST  /api/v1/collections/:collectionId/study-sessions/:sessionId/answers
-router.post('/:sessionId/answers', sessionIdParam, validate, StudySessionController.recordAnswer.bind(StudySessionController));
+router.post(
+    '/:sessionId/answers',
+    ...sessionAccess,
+    body('flashcardID').isInt({ min: 1 }).withMessage('flashcardID must be a positive integer.'),
+    body('responseType').isIn(['known', 'unknown', 'skipped']).withMessage("responseType must be 'known', 'unknown', or 'skipped'."),
+    validate,
+    StudySessionController.recordAnswer.bind(StudySessionController)
+);
 
 // UC-4:  PATCH /api/v1/collections/:collectionId/study-sessions/:sessionId/complete
-router.patch('/:sessionId/complete', sessionIdParam, validate, StudySessionController.complete.bind(StudySessionController));
+router.patch('/:sessionId/complete', ...sessionAccess, StudySessionController.complete.bind(StudySessionController));
 
 // FR-20: GET   /api/v1/collections/:collectionId/study-sessions/:sessionId/summary
-router.get('/:sessionId/summary', sessionIdParam, validate, StudySessionController.getSummary.bind(StudySessionController));
+router.get('/:sessionId/summary', ...sessionAccess, StudySessionController.getSummary.bind(StudySessionController));
 
 export default router;
