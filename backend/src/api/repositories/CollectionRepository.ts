@@ -23,6 +23,15 @@ class CollectionRepository {
         return Collection.findOne({ where: { userID, collectionName } });
     }
 
+    async findAllPublicCollections(limit: number, offset: number): Promise<{ rows: Collection[]; count: number }> {
+        return Collection.findAndCountAll({
+            where: { visibility: 'public' },
+            order: [['updatedAt', 'DESC']],
+            limit,
+            offset,
+        });
+    }
+
     async createCollection(data: CollectionCreationAttributes): Promise<Collection> {
         return Collection.create(data);
     }

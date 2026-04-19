@@ -5,6 +5,17 @@ import CollectionService from '../services/CollectionService';
 // Use Cases 3 (create), 5 (delete), 8 (rename), 10 (import), 11 (export), 16 (share)
 
 class CollectionController {
+    async getPublic(req: Request, res: Response, next: NextFunction) {
+        try {
+            const page  = Math.max(1, parseInt(String(req.query.page  ?? 1), 10)  || 1);
+            const limit = Math.min(30, Math.max(1, parseInt(String(req.query.limit ?? 30), 10) || 30));
+            const result = await CollectionService.getPublicCollections(page, limit);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
     async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const collections = await CollectionService.getAllCollectionsByUser(req.userdata!.userID);

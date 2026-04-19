@@ -16,6 +16,9 @@ router.param('collectionId', CollectionAccessMiddleware.forCollection.bind(Colle
 // UC-3:  GET    /api/v1/collections
 router.get('/', CollectionController.getAll.bind(CollectionController));
 
+// GET    /api/v1/collections/public?page=1&limit=30
+router.get('/public', CollectionController.getPublic.bind(CollectionController));
+
 // UC-3:  POST   /api/v1/collections
 router.post(
     '/',

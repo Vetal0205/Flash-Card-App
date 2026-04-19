@@ -56,6 +56,12 @@ class CollectionService {
         return CollectionRepository.findAllCollectionsByUser(userID);
     }
 
+    async getPublicCollections(page: number, limit: number): Promise<{ rows: Collection[]; count: number; totalPages: number }> {
+        const offset = (page - 1) * limit;
+        const { rows, count } = await CollectionRepository.findAllPublicCollections(limit, offset);
+        return { rows, count, totalPages: Math.ceil(count / limit) };
+    }
+
     async create(data: CollectionCreationAttributes): Promise<Collection> {
         // FR-12: create new collection.
         const collectionName = data.collectionName.trim().toLowerCase();
