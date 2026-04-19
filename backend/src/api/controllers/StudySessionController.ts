@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import StudySessionService from '../services/StudySessionService';
 
-// Handles HTTP for: /study-sessions
+// Handles HTTP for: /api/v1/collections/:collectionId/study-sessions[/:sessionId]
 // Use Cases 4 (random study + self-grade), 9 (pause/resume)
 
 class StudySessionController {

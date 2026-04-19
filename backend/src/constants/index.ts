@@ -11,8 +11,12 @@ export const ANSWER = {
     SKIPPED: 'skipped'
 } as const;
 
-// FR-23: allowed file upload formats
-export const ALLOWED_UPLOAD_FORMATS = ['text/plain'] as const;
+// FR-29: JWT token lifetimes
+export const DEFAULT_TOKEN_EXPIRES = '1h';
+export const REMEMBER_ME_EXPIRES = '30d';
+
+// NFR-13: maximum upload file size (bytes) — 50 MB
+export const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 // FR-15: collection view modes
 export const VIEW_MODE = {

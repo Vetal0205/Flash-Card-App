@@ -1,5 +1,6 @@
 import Flashcard, { FlashcardCreationAttributes, FlashcardUpdateAttributes } from '../models/Flashcard';
 import UserFlashcardProgress, { UserFlashcardProgressCreationAttributes, UserFlashcardProgressUpdateAttributes } from '../models/UserFlashcardProgress';
+import { Op } from 'sequelize';
 
 // Data access for Flashcard and UserFlashcardProgress models
 // Called by: FlashcardService
@@ -10,44 +11,70 @@ import UserFlashcardProgress, { UserFlashcardProgressCreationAttributes, UserFla
 // FR-02: search by keyword
 
 class FlashcardRepository {
-    // TODO: implement each method
-
     async findAllFlashcardsByCollection(collectionID: number): Promise<Flashcard[]> {
-        throw new Error('Not implemented');
+        return Flashcard.findAll({
+            where: { collectionID },
+            order: [['createdAt', 'ASC']],
+        });
     }
 
     // isFlaggedDifficult is per-user (UserFlashcardProgress), so userID is required
     async findFlaggedByUserAndCollectionn(userID: number, collectionID: number): Promise<Flashcard[]> {
-        throw new Error('Not implemented');
+        return Flashcard.findAll({
+            where: { collectionID },
+            include: [
+                {
+                    model: UserFlashcardProgress,
+                    where: { userID, isFlaggedDifficult: true },
+                    required: true,
+                },
+            ],
+            order: [['createdAt', 'ASC']],
+        });
     }
 
     async searchFlashcardsByKeyword(collectionID: number, keyword: string): Promise<Flashcard[]> {
-        throw new Error('Not implemented');
+        return Flashcard.findAll({
+            where: {
+                collectionID,
+                [Op.or]: [
+                    { question: { [Op.iLike]: `%${keyword}%` } },
+                    { answer: { [Op.iLike]: `%${keyword}%` } },
+                ],
+            },
+            order: [['createdAt', 'ASC']],
+        });
     }
 
     async findFlashcardById(id: number): Promise<Flashcard | null> {
-        throw new Error('Not implemented');
+        return Flashcard.findByPk(id);
     }
 
     async createFlashcard(data: FlashcardCreationAttributes): Promise<Flashcard> {
-        throw new Error('Not implemented');
+        return Flashcard.create(data);
     }
 
     async updateFlashcard(id: number, data: FlashcardUpdateAttributes): Promise<void> {
-        throw new Error('Not implemented');
+        await Flashcard.update(data, { where: { flashcardID: id } });
     }
 
     // Creates initial UserFlashcardProgress row when a user first encounters a flashcard
     async createFlashcardProgress(data: UserFlashcardProgressCreationAttributes): Promise<UserFlashcardProgress> {
-        throw new Error('Not implemented');
+        const [progress] = await UserFlashcardProgress.findOrCreate({
+            where: { userID: data.userID, flashcardID: data.flashcardID },
+            defaults: data,
+        });
+        return progress;
     }
 
     async updateFlashcardProgress(userID: number, flashcardID: number, data: UserFlashcardProgressUpdateAttributes): Promise<void> {
-        throw new Error('Not implemented');
+        await UserFlashcardProgress.update(data, {
+            where: { userID, flashcardID },
+        });
     }
 
     async deleteFlashcardById(id: number): Promise<void> {
-        throw new Error('Not implemented');
+        await Flashcard.destroy({ where: { flashcardID: id } });
     }
 }
 

@@ -1,104 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from 'react';
-
-const STORAGE_KEY = 'minddeck-theme-dark';
-const STYLE_ID = 'minddeck-theme-vars';
-
-type ThemeValue = {
-  dark: boolean;
-  setDark: (next: boolean) => void;
-  toggle: () => void;
-};
-
-const ThemeContext = createContext<ThemeValue | null>(null);
-
-function injectThemeStylesOnce(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const el = document.createElement('style');
-  el.id = STYLE_ID;
-  el.textContent = `
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      background-color: var(--app-bg);
-      color: var(--app-fg);
-    }
-    :root[data-theme='light'] {
-      --app-bg: #f5f3ee;
-      --app-fg: #1a1a1a;
-      --app-muted: #888888;
-      --app-muted-strong: #555555;
-      --app-accent: #6b8f71;
-      --app-surface: #fafafa;
-    }
-    :root[data-theme='dark'] {
-      --app-bg: #141718;
-      --app-fg: #e8eaed;
-      --app-muted: #9aa0a6;
-      --app-muted-strong: #bdc1c6;
-      --app-accent: #6b8f71;
-      --app-surface: #2a2f33;
-    }
-  `;
-  document.head.appendChild(el);
-}
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [dark, setDarkState] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-
-  useLayoutEffect(() => {
-    injectThemeStylesOnce();
-  }, []);
-
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    try {
-      localStorage.setItem(STORAGE_KEY, dark ? '1' : '0');
-    } catch {
-      /* ignore */
-    }
-  }, [dark]);
-
-  const setDark = useCallback((next: boolean) => {
-    setDarkState(next);
-  }, []);
-
-  const toggle = useCallback(() => {
-    setDarkState((d) => !d);
-  }, []);
-
-  const value = useMemo(
-    () => ({ dark, setDark, toggle }),
-    [dark, setDark, toggle]
-  );
-
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
-}
-
-export function useTheme(): ThemeValue {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    throw new Error('useTheme must be used within ThemeProvider');
-  }
-  return ctx;
-}
+import { type CSSProperties } from 'react';
+import { useTheme } from './ThemeContext';
 
 type Props = {
   variant?: 'default' | 'compact';
@@ -120,9 +21,7 @@ export default function DarkModeToggle({
     >
       {showLabel ? (
         <div>
-          <p style={{ ...styles.label, fontSize: compact ? 13 : 16 }}>
-            Dark mode
-          </p>
+          <p style={{ ...styles.label, fontSize: compact ? 13 : 16 }}>Dark mode</p>
           {!compact ? (
             <p style={styles.hint}>
               {dark ? 'Dark theme is on' : 'Dark theme is off'}

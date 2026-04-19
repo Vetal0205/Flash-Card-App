@@ -1,12 +1,18 @@
+//Halema Diab
+//Code for UC8- Rename Collection
+//Maps to FR-18, FR-28, NFR-03
+//This component lets the user type a new collection name and save it
+
 import { useState } from 'react';
 
 interface Props {
   currentName: string;
   onSave: (newName: string) => void;
   onCancel: () => void;
+  existingNames?: string[];
 }
 
-function RenameCollection({ currentName, onSave, onCancel }: Props) {
+function RenameCollection({ currentName, onSave, onCancel, existingNames = [] }: Props) {
   const [newName, setNewName] = useState(currentName);
   const [error, setError] = useState('');
 
@@ -19,7 +25,11 @@ function RenameCollection({ currentName, onSave, onCancel }: Props) {
       setError('Invalid Collection Name.');
       return;
     }
-    onSave(newName);
+    if (existingNames.some(name => name.toLowerCase() === newName.trim().toLowerCase() && name.toLowerCase() !== currentName.toLowerCase())) {
+      setError('Collection Name already exists');
+      return;
+    }
+    onSave(newName.trim());
   };
 
   return (

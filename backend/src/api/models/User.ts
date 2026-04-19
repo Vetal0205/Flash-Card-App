@@ -17,7 +17,11 @@ export type UserCreationAttributes = Optional<UserAttributes, 'userID' | 'create
 // Picked fields for update, because only username, email and passwordHash can be updated
 export type UserUpdateAttributes = Partial<
     Pick<UserAttributes, 'username' | 'email' | 'passwordHash'>>;
-export type UserOutput =  Omit<UserAttributes, 'passwordHash'>;
+export type UserOutput = Omit<UserAttributes, 'passwordHash'> & {
+    failedLoginAttempts?: number;
+    lockoutUntil?: Date | null;
+    lastActivityAt?: Date | null;
+};
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
     declare userID: number;
     declare username: string;

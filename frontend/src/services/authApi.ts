@@ -6,12 +6,14 @@ export type LoginResult =
 
 export async function loginRequest(
   username: string,
-  password: string
+  password: string,
+  rememberMe = false
 ): Promise<LoginResult> {
   const res = await fetch(`${apiBase()}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    credentials: 'include',
+    body: JSON.stringify({ credential: username, password, rememberMe }),
   });
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;

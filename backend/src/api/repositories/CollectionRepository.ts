@@ -8,26 +8,27 @@ import Collection, { CollectionCreationAttributes, CollectionUpdateAttributes } 
 // FR-07: list all
 
 class CollectionRepository {
-    // TODO: implement each method
-
     async findAllCollectionsByUser(userID: number): Promise<Collection[]> {
-        throw new Error('Not implemented');
+        return Collection.findAll({
+            where: { userID },
+            order: [['updatedAt', 'DESC']],
+        });
     }
 
     async findCollectionById(id: number): Promise<Collection | null> {
-        throw new Error('Not implemented');
+        return Collection.findByPk(id);
     }
 
     async createCollection(data: CollectionCreationAttributes): Promise<Collection> {
-        throw new Error('Not implemented');
+        return Collection.create(data);
     }
 
     async updateCollection(id: number, data: CollectionUpdateAttributes): Promise<void> {
-        throw new Error('Not implemented');
+        await Collection.update(data, { where: { collectionID: id } });
     }
 
     async deleteCollectionById(id: number): Promise<void> {
-        throw new Error('Not implemented');
+        await Collection.destroy({ where: { collectionID: id } });
     }
 }
 

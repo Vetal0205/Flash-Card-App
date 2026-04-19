@@ -1,127 +1,143 @@
-import { FormEvent, useState, type CSSProperties } from 'react';
+import { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { registerRequest } from '../../services/authApi';
-import {
-  PASSWORD_RULES_ERROR,
-  validatePasswordRules,
-} from '../../services/passwordRules';
+
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Register() {
   const navigate = useNavigate();
-  const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ fullName?: string; emailOrUsername?: string; password?: string; general?: string }>({});
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setMessage('');
+  const isLongEnough = password.length >= 12;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
 
-    const name = fullName.trim();
-    const user = username.trim();
-    const pass = password;
+  const validate = () => {
+    const newErrors: { fullName?: string; emailOrUsername?: string; password?: string } = {};
+    if (!fullName.trim()) newErrors.fullName = "Full name is required.";
+    if (!emailOrUsername.trim()) newErrors.emailOrUsername = "Email or username is required.";
+    if (!password) newErrors.password = "Password is required.";
+    else if (!isLongEnough) newErrors.password = "Password must be at least 12 characters.";
+    else if (!hasUppercase) newErrors.password = "Password must include an uppercase letter.";
+    else if (!hasNumber) newErrors.password = "Password must include a number.";
+    return newErrors;
+  };
 
-    if (!name || !user || !pass) {
+  const handleCreate = async () => {
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
-
-    if (!validatePasswordRules(pass)) {
-      setMessage(PASSWORD_RULES_ERROR);
-      return;
-    }
-
-    setSubmitting(true);
+    setErrors({});
+    setLoading(true);
     try {
-      const result = await registerRequest({
-        fullName: name,
-        username: user,
-        password: pass,
+      const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ fullName, emailOrUsername, password }),
       });
-      if (result.ok) {
-        navigate('/');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErrors({ general: data.message || "Registration failed. Please try again." });
+        setLoading(false);
         return;
       }
-      setMessage(result.error);
-    } finally {
-      setSubmitting(false);
+      navigate('/');
+    } catch {
+      // backend not ready — navigate to login for demo
+      navigate('/');
     }
-  }
+    setLoading(false);
+  };
 
   return (
-    <div style={styles.container}>
+    <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.logo}>MindDeck</h2>
+        {/* Logo */}
+        <div style={styles.logoRow}>
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="9" y="6" width="20" height="15" rx="3" fill="#a8c5a0" stroke="#6b8f71" strokeWidth="1.5"/>
+            <rect x="5" y="13" width="20" height="15" rx="3" fill="white" stroke="#6b8f71" strokeWidth="1.5"/>
+          </svg>
+          <span style={styles.logoText}>MindDeck</span>
+        </div>
+
         <h2 style={styles.title}>Create your account</h2>
         <p style={styles.subtitle}>Fill in your information below</p>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <label htmlFor="register-fullname" style={styles.label}>
-            FULL NAME
-          </label>
+        {errors.general && (
+          <div style={styles.errorBanner}>{errors.general}</div>
+        )}
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>FULL NAME</label>
           <input
-            id="register-fullname"
-            style={styles.input}
+            style={{ ...styles.input, borderColor: errors.fullName ? '#e74c3c' : '#e0ddd6' }}
             type="text"
             placeholder="John Doe"
-            autoComplete="name"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={(e) => { setFullName(e.target.value); setErrors({ ...errors, fullName: undefined }); }}
           />
+          {errors.fullName && <p style={styles.errorText}>{errors.fullName}</p>}
+        </div>
 
-          <label htmlFor="register-username" style={styles.label}>
-            EMAIL OR USERNAME
-          </label>
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>EMAIL OR USERNAME</label>
           <input
-            id="register-username"
-            style={styles.input}
+            style={{ ...styles.input, borderColor: errors.emailOrUsername ? '#e74c3c' : '#e0ddd6' }}
             type="text"
             placeholder="you@example.com"
-            autoComplete="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={emailOrUsername}
+            onChange={(e) => { setEmailOrUsername(e.target.value); setErrors({ ...errors, emailOrUsername: undefined }); }}
           />
+          {errors.emailOrUsername && <p style={styles.errorText}>{errors.emailOrUsername}</p>}
+        </div>
 
-          <label htmlFor="register-password" style={styles.label}>
-            PASSWORD
-          </label>
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>PASSWORD</label>
           <input
-            id="register-password"
-            style={styles.input}
+            style={{ ...styles.input, borderColor: errors.password ? '#e74c3c' : '#e0ddd6' }}
             type="password"
-            placeholder="••••••••"
-            autoComplete="new-password"
+            placeholder="••••••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => { setPassword(e.target.value); setErrors({ ...errors, password: undefined }); }}
           />
-          <ul style={styles.hints}>
-            <li>At least 12 characters</li>
-            <li>1 uppercase and 1 lowercase</li>
-            <li>1 number</li>
-          </ul>
+          {errors.password && <p style={styles.errorText}>{errors.password}</p>}
 
-          {message ? (
-            <p role="alert" style={styles.error}>
-              {message}
+          <div style={styles.hints}>
+            <p style={{ ...styles.hint, color: isLongEnough ? '#3a7d44' : '#aaa' }}>
+              {isLongEnough ? '✓' : '○'} At least 12 characters
             </p>
-          ) : null}
-
-          <button
-            type="submit"
-            style={styles.createButton}
-            disabled={submitting}
-          >
-            Create Account
-          </button>
-        </form>
-
-        <p style={styles.or}>or</p>
+            <p style={{ ...styles.hint, color: hasUppercase ? '#3a7d44' : '#aaa' }}>
+              {hasUppercase ? '✓' : '○'} 1 uppercase letter
+            </p>
+            <p style={{ ...styles.hint, color: hasNumber ? '#3a7d44' : '#aaa' }}>
+              {hasNumber ? '✓' : '○'} 1 number
+            </p>
+          </div>
+        </div>
 
         <button
-          type="button"
-          style={styles.signInButton}
-          onClick={() => navigate('/')}
+          style={{ ...styles.createButton, opacity: loading ? 0.7 : 1 }}
+          onClick={handleCreate}
+          disabled={loading}
         >
+          {loading ? "Creating account..." : "Create Account"}
+        </button>
+
+        <div style={styles.divider}>
+          <div style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <div style={styles.dividerLine} />
+        </div>
+
+        <button style={styles.signInButton} onClick={() => navigate('/')}>
           Sign In
         </button>
       </div>
@@ -129,93 +145,142 @@ function Register() {
   );
 }
 
-const styles: Record<string, CSSProperties> = {
-  container: {
+const styles: Record<string, React.CSSProperties> = {
+  page: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100vh',
-    backgroundColor: '#f5f0eb',
+    minHeight: '100vh',
+    backgroundColor: '#f5f3ee',
+    fontFamily: 'Georgia, serif',
   },
   card: {
     backgroundColor: '#ffffff',
-    padding: '40px',
-    borderRadius: '10px',
-    width: '350px',
-    display: 'flex',
-    flexDirection: 'column',
+    padding: '48px 40px',
+    borderRadius: '16px',
+    width: '380px',
+    maxWidth: '90vw',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+    border: '1px solid #e0ddd6',
+    margin: '0 auto',
   },
-  logo: {
+  logoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '28px',
+  },
+  logoText: {
     fontSize: '20px',
     fontWeight: 'bold',
-    marginBottom: '10px',
-    color: '#333',
+    color: '#2c2c2c',
+    letterSpacing: '0.5px',
   },
   title: {
-    fontSize: '22px',
+    fontSize: '24px',
     fontWeight: 'bold',
-    marginBottom: '5px',
-    color: '#333',
+    color: '#1a1a1a',
+    marginBottom: '6px',
+    marginTop: '0',
   },
   subtitle: {
     fontSize: '14px',
     color: '#888',
-    marginBottom: '20px',
+    marginBottom: '28px',
+    marginTop: '0',
+    fontFamily: 'sans-serif',
+  },
+  errorBanner: {
+    backgroundColor: '#fde8e8',
+    color: '#c0392b',
+    border: '1px solid #f5c6c6',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    fontFamily: 'sans-serif',
+    marginBottom: '16px',
+  },
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    marginBottom: '16px',
   },
   label: {
-    display: 'block',
     fontSize: '11px',
     fontWeight: 'bold',
-    color: '#555',
-    marginBottom: '5px',
+    color: '#888',
+    letterSpacing: '0.8px',
+    fontFamily: 'sans-serif',
   },
   input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '10px',
-    marginBottom: '15px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
+    padding: '11px 14px',
+    borderRadius: '8px',
+    border: '1px solid #e0ddd6',
     fontSize: '14px',
+    color: '#1a1a1a',
+    outline: 'none',
+    fontFamily: 'sans-serif',
+    backgroundColor: '#fafaf8',
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: '12px',
+    margin: '0',
+    fontFamily: 'sans-serif',
   },
   hints: {
-    fontSize: '12px',
-    color: '#888',
-    marginBottom: '15px',
-    paddingLeft: '20px',
+    marginTop: '8px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
   },
-  error: {
-    color: '#b00020',
-    fontSize: '13px',
-    marginBottom: '10px',
-    marginTop: 0,
+  hint: {
+    fontSize: '12px',
+    fontFamily: 'sans-serif',
+    margin: '0',
+    transition: 'color 0.2s ease',
   },
   createButton: {
     width: '100%',
-    padding: '10px',
+    padding: '12px',
     backgroundColor: '#6b8f71',
     color: 'white',
     border: 'none',
-    borderRadius: '5px',
-    fontSize: '14px',
+    borderRadius: '8px',
+    fontSize: '15px',
+    fontWeight: 'bold',
     cursor: 'pointer',
-    marginBottom: '10px',
+    fontFamily: 'sans-serif',
+    marginBottom: '16px',
   },
-  or: {
-    textAlign: 'center',
-    color: '#333',
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '16px',
+  },
+  dividerLine: {
+    flex: 1,
+    height: '1px',
+    backgroundColor: '#e0ddd6',
+  },
+  dividerText: {
     fontSize: '13px',
-    marginBottom: '10px',
+    color: '#aaa',
+    fontFamily: 'sans-serif',
   },
   signInButton: {
     width: '100%',
-    padding: '10px',
+    padding: '12px',
     backgroundColor: 'white',
-    border: '1px solid #ccc',
-    borderRadius: '5px',
-    fontSize: '14px',
+    border: '1px solid #e0ddd6',
+    borderRadius: '8px',
+    fontSize: '15px',
     cursor: 'pointer',
     color: '#333',
+    fontFamily: 'sans-serif',
+    fontWeight: 'bold',
   },
 };
 

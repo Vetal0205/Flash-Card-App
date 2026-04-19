@@ -1,0 +1,72 @@
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: flash-card-database
+    environment:
+      POSTGRES_DB: ${DEV_POSTGRES_DB}
+      POSTGRES_USER: ${DEV_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DEV_POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DEV_POSTGRES_USER} -d ${DEV_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    container_name: flash-card-backend
+    command: sh -c "npm run sync-db && npm run dev"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      APP_NAME: ${DEV_APP_NAME}
+      SERVER: ${DEV_SERVER}
+      BACKEND_PORT: ${DEV_BACKEND_PORT}
+      API_VERSION: ${DEV_API_VERSION}
+      SECRET: ${DEV_SECRET}
+      CORS_ORIGIN: ${DEV_CORS_ORIGIN}
+      RATE_LIMIT_WINDOW_MS: ${DEV_RATE_LIMIT_WINDOW_MS}
+      RATE_LIMIT_MAX: ${DEV_RATE_LIMIT_MAX}
+      DB_HOST: database
+      DB_DATABASE: ${DEV_DB_DATABASE}
+      DB_USERNAME: ${DEV_DB_USERNAME}
+      DB_PASSWORD: ${DEV_DB_PASSWORD}
+      DB_PORT: ${DEV_DB_PORT}
+      DB_DIALECT: ${DEV_DB_DIALECT}
+      DB_TIMEZONE: ${DEV_DB_TIMEZONE}
+      DB_LOG: ${DEV_DB_LOG}
+      DB_POOL_MIN: ${DEV_DB_POOL_MIN}
+      DB_POOL_MAX: ${DEV_DB_POOL_MAX}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    container_name: flash-card-frontend
+    depends_on:
+      - backend
+    environment:
+      REACT_APP_API_URL: ${DEV_REACT_APP_API_URL}
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+
+volumes:
+  postgres_data:
+  backend_node_modules:
+  frontend_node_modules:

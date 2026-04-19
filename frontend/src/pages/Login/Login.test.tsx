@@ -6,7 +6,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Login from './Login';
-import MockPage from '../MockPage';
 import { loginRequest } from '../../services/authApi';
 import { LOCKOUT_MESSAGE } from '../../services/loginLockout';
 
@@ -20,7 +19,7 @@ function renderLogin() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<div>Register</div>} />
-        <Route path="/mock" element={<MockPage />} />
+        <Route path="/collections" element={<div data-testid="collections-page">Collections</div>} />
       </Routes>
     </MemoryRouter>
   );
@@ -42,9 +41,9 @@ describe('Use Case 1 – User Login', () => {
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId('landing-page')).toBeInTheDocument();
+      expect(screen.getByTestId('collections-page')).toBeInTheDocument();
     });
-    expect(mockedLogin).toHaveBeenCalledWith('alice', 'ValidPass123');
+    expect(mockedLogin).toHaveBeenCalledWith('alice', 'ValidPass123', false);
   });
 
   test('UC1-F-7: three failed logins within 60 minutes lock account and show lockout message', async () => {

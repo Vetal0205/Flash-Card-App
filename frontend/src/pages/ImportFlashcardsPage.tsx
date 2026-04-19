@@ -1,13 +1,14 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import DarkModeToggle from '../components/DarkModeToggle';
+import Navbar from '../components/Navbar';
+import FileUploadZone from '../components/FileUploadZone';
+import PreviewCard from '../components/PreviewCard';
 
 type PreviewRow = { question: string; answer: string };
 
 export default function ImportFlashcardsPage() {
   const navigate = useNavigate();
   const { collectionId } = useParams();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<PreviewRow[]>([]);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -39,22 +40,19 @@ export default function ImportFlashcardsPage() {
 
   return (
     <div style={pageStyle}>
-      <header style={headerStyle}>
+      <Navbar />
+      <div style={containerStyle}>
         <button
           type="button"
           style={backBtnStyle}
           onClick={() =>
             collectionId
               ? navigate(`/collections/${collectionId}`)
-              : navigate('/mock')
+              : navigate('/collections')
           }
         >
-          ← Back
+          ← Back to collection
         </button>
-        <DarkModeToggle variant="compact" showLabel={false} />
-      </header>
-
-      <div style={containerStyle}>
         <h1 style={h1Style}>Import flashcards</h1>
         <p style={leadStyle}>
           Collection ID:{' '}
@@ -62,32 +60,18 @@ export default function ImportFlashcardsPage() {
           (question, answer per line) to preview. Saving to the server is not
           wired yet.
         </p>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv,text/csv,text/plain"
-          style={{ display: 'none' }}
-          onChange={(e) => handleFiles(e.target.files)}
-        />
-        <button
-          type="button"
-          style={chooseFileBtnStyle}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          Choose CSV file
-        </button>
-
+        <FileUploadZone onFilesSelected={handleFiles} />
         {status ? <p style={statusStyle}>{status}</p> : null}
         {previews.length > 0 ? (
           <div style={listStyle}>
             <h2 style={h2Style}>Preview</h2>
             {previews.map((row, i) => (
-              <div key={`${row.question}-${i}`} style={cardStyle}>
-                <p style={cardMetaStyle}>#{i + 1}</p>
-                <p style={cardQStyle}>{row.question}</p>
-                <p style={cardAStyle}>{row.answer}</p>
-              </div>
+              <PreviewCard
+                key={`${row.question}-${i}`}
+                index={i}
+                question={row.question}
+                answer={row.answer}
+              />
             ))}
           </div>
         ) : null}
@@ -102,12 +86,10 @@ const pageStyle: CSSProperties = {
   fontFamily: 'Georgia, serif',
 };
 
-const headerStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '16px 20px',
-  borderBottom: '1px solid var(--app-muted, #e0ddd6)',
+const containerStyle: CSSProperties = {
+  maxWidth: 720,
+  margin: '0 auto',
+  padding: '32px 16px',
 };
 
 const backBtnStyle: CSSProperties = {
@@ -116,14 +98,9 @@ const backBtnStyle: CSSProperties = {
   color: 'var(--app-muted-strong, #555)',
   fontSize: 14,
   cursor: 'pointer',
+  marginBottom: 20,
   padding: 0,
   fontFamily: 'sans-serif',
-};
-
-const containerStyle: CSSProperties = {
-  maxWidth: 720,
-  margin: '0 auto',
-  padding: '32px 16px',
 };
 
 const h1Style: CSSProperties = {
@@ -148,18 +125,6 @@ const codeStyle: CSSProperties = {
   borderRadius: 4,
 };
 
-const chooseFileBtnStyle: CSSProperties = {
-  backgroundColor: 'var(--app-accent, #6b8f71)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 8,
-  padding: '10px 18px',
-  fontSize: 15,
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'sans-serif',
-};
-
 const statusStyle: CSSProperties = {
   fontSize: 14,
   color: 'var(--app-accent, #6b8f71)',
@@ -179,34 +144,4 @@ const h2Style: CSSProperties = {
   fontFamily: 'sans-serif',
   color: 'var(--app-fg, #1a1a1a)',
   margin: '0 0 8px 0',
-};
-
-const cardStyle: CSSProperties = {
-  border: '1px solid var(--app-muted, #e0ddd6)',
-  borderRadius: 8,
-  padding: '12px 14px',
-  backgroundColor: 'var(--app-surface, #fff)',
-};
-
-const cardMetaStyle: CSSProperties = {
-  fontSize: 11,
-  color: 'var(--app-muted, #888)',
-  margin: '0 0 6px 0',
-  fontFamily: 'sans-serif',
-};
-
-const cardQStyle: CSSProperties = {
-  fontSize: 15,
-  fontWeight: 600,
-  color: 'var(--app-fg, #1a1a1a)',
-  margin: '0 0 6px 0',
-  fontFamily: 'sans-serif',
-};
-
-const cardAStyle: CSSProperties = {
-  fontSize: 14,
-  color: 'var(--app-muted-strong, #555)',
-  margin: 0,
-  fontFamily: 'sans-serif',
-  lineHeight: 1.45,
 };

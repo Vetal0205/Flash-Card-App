@@ -1,0 +1,63 @@
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: flash-card-database-stage
+    environment:
+      POSTGRES_DB: ${STAGE_POSTGRES_DB}
+      POSTGRES_USER: ${STAGE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${STAGE_POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_stage_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${STAGE_POSTGRES_USER} -d ${STAGE_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: stage
+    container_name: flash-card-backend-stage
+    command: sh -c "npm run sync-db && npm start"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      APP_NAME: ${STAGE_APP_NAME}
+      SERVER: ${STAGE_SERVER}
+      BACKEND_PORT: ${STAGE_BACKEND_PORT}
+      API_VERSION: ${STAGE_API_VERSION}
+      SECRET: ${STAGE_SECRET}
+      CORS_ORIGIN: ${STAGE_CORS_ORIGIN}
+      RATE_LIMIT_WINDOW_MS: ${STAGE_RATE_LIMIT_WINDOW_MS}
+      RATE_LIMIT_MAX: ${STAGE_RATE_LIMIT_MAX}
+      DB_HOST: database
+      DB_DATABASE: ${STAGE_DB_DATABASE}
+      DB_USERNAME: ${STAGE_DB_USERNAME}
+      DB_PASSWORD: ${STAGE_DB_PASSWORD}
+      DB_PORT: ${STAGE_DB_PORT}
+      DB_DIALECT: ${STAGE_DB_DIALECT}
+      DB_TIMEZONE: ${STAGE_DB_TIMEZONE}
+      DB_LOG: ${STAGE_DB_LOG}
+      DB_POOL_MIN: ${STAGE_DB_POOL_MIN}
+      DB_POOL_MAX: ${STAGE_DB_POOL_MAX}
+    ports:
+      - "5002:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: stage
+      args:
+        REACT_APP_API_URL: ${STAGE_REACT_APP_API_URL}
+    container_name: flash-card-frontend-stage
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_stage_data:

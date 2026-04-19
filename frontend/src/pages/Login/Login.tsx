@@ -1,4 +1,5 @@
-import { FormEvent, useState, type CSSProperties } from 'react';
+import { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginRequest } from '../../services/authApi';
 import {
@@ -12,108 +13,123 @@ const AUTH_ERROR = 'Could not authenticate';
 
 function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [errors, setErrors] = useState<{ emailOrUsername?: string; password?: string; general?: string }>({});
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setMessage('');
+  const validate = () => {
+    const newErrors: { emailOrUsername?: string; password?: string } = {};
+    if (!emailOrUsername.trim()) newErrors.emailOrUsername = "Email or username is required.";
+    if (!password) newErrors.password = "Password is required.";
+    return newErrors;
+  };
 
+  const handleSignIn = async () => {
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+    setErrors({});
     if (isAccountLocked()) {
-      setMessage(LOCKOUT_MESSAGE);
+      setErrors({ general: LOCKOUT_MESSAGE });
       return;
     }
 
-    const u = username.trim();
-    const p = password.trim();
-    if (!u || !p) {
-      return;
-    }
-
-    setSubmitting(true);
+    setLoading(true);
     try {
-      const result = await loginRequest(u, p);
-      if (result.ok) {
-        clearLoginFailuresAndLockout();
-        navigate('/mock');
+      const result = await loginRequest(emailOrUsername.trim(), password, rememberMe);
+      if (!result.ok) {
+        if (result.error === AUTH_ERROR) {
+          recordLoginFailure();
+          setErrors({ general: isAccountLocked() ? LOCKOUT_MESSAGE : AUTH_ERROR });
+        } else {
+          setErrors({ general: result.error });
+        }
+        setLoading(false);
         return;
       }
-      if (result.error === AUTH_ERROR) {
-        recordLoginFailure();
-        setMessage(isAccountLocked() ? LOCKOUT_MESSAGE : AUTH_ERROR);
-      } else {
-        setMessage(result.error);
-      }
-    } finally {
-      setSubmitting(false);
+      clearLoginFailuresAndLockout();
+      navigate('/collections');
+    } catch (error) {
+      setErrors({ general: 'Unable to sign in right now. Please try again.' });
     }
-  }
+    setLoading(false);
+  };
 
   return (
-    <div style={styles.container}>
+    <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.logo}>MindDeck</h2>
+        {/* Logo */}
+        <div style={styles.logoRow}>
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="9" y="6" width="20" height="15" rx="3" fill="#a8c5a0" stroke="#6b8f71" strokeWidth="1.5"/>
+            <rect x="5" y="13" width="20" height="15" rx="3" fill="white" stroke="#6b8f71" strokeWidth="1.5"/>
+          </svg>
+          <span style={styles.logoText}>MindDeck</span>
+        </div>
+
         <h2 style={styles.title}>Welcome back</h2>
         <p style={styles.subtitle}>Sign in to continue studying</p>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <label htmlFor="login-username" style={styles.label}>
-            EMAIL OR USERNAME
-          </label>
-          <input
-            id="login-username"
-            style={styles.input}
-            type="text"
-            autoComplete="username"
-            placeholder="you@example.com"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+        {errors.general && (
+          <div role="alert" style={styles.errorBanner}>{errors.general}</div>
+        )}
 
-          <label htmlFor="login-password" style={styles.label}>
-            PASSWORD
-          </label>
+        <div style={styles.fieldGroup}>
+          <label htmlFor="login-email-or-username" style={styles.label}>EMAIL OR USERNAME</label>
+          <input
+            id="login-email-or-username"
+            style={{ ...styles.input, borderColor: errors.emailOrUsername ? '#e74c3c' : '#e0ddd6' }}
+            type="text"
+            placeholder="you@example.com"
+            value={emailOrUsername}
+            onChange={(e) => { setEmailOrUsername(e.target.value); setErrors({ ...errors, emailOrUsername: undefined }); }}
+          />
+          {errors.emailOrUsername && <p style={styles.errorText}>{errors.emailOrUsername}</p>}
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label htmlFor="login-password" style={styles.label}>PASSWORD</label>
           <input
             id="login-password"
-            style={styles.input}
+            style={{ ...styles.input, borderColor: errors.password ? '#e74c3c' : '#e0ddd6' }}
             type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
+            placeholder="••••••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => { setPassword(e.target.value); setErrors({ ...errors, password: undefined }); }}
           />
+          {errors.password && <p style={styles.errorText}>{errors.password}</p>}
+        </div>
 
-          <div style={styles.rememberMe}>
-            <input id="login-remember" type="checkbox" />
-            <label htmlFor="login-remember" style={styles.rememberLabel}>
-              Remember me
-            </label>
-          </div>
-
-          {message ? (
-            <p role="alert" style={styles.error}>
-              {message}
-            </p>
-          ) : null}
-
-          <button
-            type="submit"
-            style={styles.signInButton}
-            disabled={submitting}
-          >
-            Sign In
-          </button>
-        </form>
-
-        <p style={styles.or}>or</p>
+        <div style={styles.rememberMe}>
+          <input
+            type="checkbox"
+            id="rememberMe"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            style={{ accentColor: '#6b8f71', cursor: 'pointer' }}
+          />
+          <label htmlFor="rememberMe" style={styles.rememberLabel}>Remember me</label>
+        </div>
 
         <button
-          type="button"
-          style={styles.createButton}
-          onClick={() => navigate('/register')}
+          style={{ ...styles.signInButton, opacity: loading ? 0.7 : 1 }}
+          onClick={handleSignIn}
+          disabled={loading}
         >
+          {loading ? "Signing in..." : "Sign In"}
+        </button>
+
+        <div style={styles.divider}>
+          <div style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <div style={styles.dividerLine} />
+        </div>
+
+        <button style={styles.createButton} onClick={() => navigate('/register')}>
           Create Account
         </button>
       </div>
@@ -121,99 +137,142 @@ function Login() {
   );
 }
 
-const styles: Record<string, CSSProperties> = {
-  container: {
+const styles: Record<string, React.CSSProperties> = {
+  page: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100vh',
-    backgroundColor: '#f5f0eb',
+    minHeight: '100vh',
+    backgroundColor: '#f5f3ee',
+    fontFamily: 'Georgia, serif',
   },
   card: {
     backgroundColor: '#ffffff',
-    padding: '40px',
-    borderRadius: '10px',
-    width: '350px',
-    display: 'flex',
-    flexDirection: 'column',
+    padding: '48px 40px',
+    borderRadius: '16px',
+    width: '380px',
+    maxWidth: '90vw',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+    border: '1px solid #e0ddd6',
+    margin: '0 auto',
   },
-  logo: {
+  logoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '28px',
+  },
+  logoText: {
     fontSize: '20px',
     fontWeight: 'bold',
-    marginBottom: '10px',
-    color: '#333',
+    color: '#2c2c2c',
+    letterSpacing: '0.5px',
   },
   title: {
-    fontSize: '22px',
+    fontSize: '24px',
     fontWeight: 'bold',
-    marginBottom: '5px',
-    color: '#333',
+    color: '#1a1a1a',
+    marginBottom: '6px',
+    marginTop: '0',
   },
   subtitle: {
     fontSize: '14px',
     color: '#888',
-    marginBottom: '20px',
+    marginBottom: '28px',
+    marginTop: '0',
+    fontFamily: 'sans-serif',
+  },
+  errorBanner: {
+    backgroundColor: '#fde8e8',
+    color: '#c0392b',
+    border: '1px solid #f5c6c6',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    fontFamily: 'sans-serif',
+    marginBottom: '16px',
+  },
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    marginBottom: '16px',
   },
   label: {
-    display: 'block',
     fontSize: '11px',
     fontWeight: 'bold',
-    color: '#555',
-    marginBottom: '5px',
+    color: '#888',
+    letterSpacing: '0.8px',
+    fontFamily: 'sans-serif',
   },
   input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '10px',
-    marginBottom: '15px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
+    padding: '11px 14px',
+    borderRadius: '8px',
+    border: '1px solid #e0ddd6',
     fontSize: '14px',
+    color: '#1a1a1a',
+    outline: 'none',
+    fontFamily: 'sans-serif',
+    backgroundColor: '#fafaf8',
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: '12px',
+    margin: '0',
+    fontFamily: 'sans-serif',
   },
   rememberMe: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    marginBottom: '15px',
-    fontSize: '14px',
-    color: '#333',
+    marginBottom: '20px',
   },
   rememberLabel: {
-    cursor: 'pointer',
-    margin: 0,
-  },
-  error: {
-    color: '#b00020',
     fontSize: '13px',
-    marginBottom: '10px',
-    marginTop: 0,
+    color: '#555',
+    fontFamily: 'sans-serif',
+    cursor: 'pointer',
   },
   signInButton: {
     width: '100%',
-    padding: '10px',
+    padding: '12px',
     backgroundColor: '#6b8f71',
     color: 'white',
     border: 'none',
-    borderRadius: '5px',
-    fontSize: '14px',
+    borderRadius: '8px',
+    fontSize: '15px',
+    fontWeight: 'bold',
     cursor: 'pointer',
-    marginBottom: '10px',
+    fontFamily: 'sans-serif',
+    marginBottom: '16px',
   },
-  or: {
-    textAlign: 'center',
-    color: '#888',
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '16px',
+  },
+  dividerLine: {
+    flex: 1,
+    height: '1px',
+    backgroundColor: '#e0ddd6',
+  },
+  dividerText: {
     fontSize: '13px',
-    marginBottom: '10px',
+    color: '#aaa',
+    fontFamily: 'sans-serif',
   },
   createButton: {
     width: '100%',
-    padding: '10px',
+    padding: '12px',
     backgroundColor: 'white',
-    border: '1px solid #ccc',
-    borderRadius: '5px',
-    fontSize: '14px',
+    border: '1px solid #e0ddd6',
+    borderRadius: '8px',
+    fontSize: '15px',
     cursor: 'pointer',
     color: '#333',
+    fontFamily: 'sans-serif',
+    fontWeight: 'bold',
   },
 };
 
