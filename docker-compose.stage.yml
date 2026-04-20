@@ -21,7 +21,7 @@ services:
       context: ./backend
       target: stage
     container_name: flash-card-backend-stage
-    command: sh -c "npm run sync-db && npm start"
+    command: sh -c "npm run build && npm run sync-db && npm start"
     depends_on:
       database:
         condition: service_healthy
