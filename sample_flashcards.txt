@@ -1,0 +1,14 @@
+Q: What is the capital of France?
+A: Paris
+
+Q: What is 2 + 2?
+A: 4
+
+Q: What language is TypeScript based on?
+A: JavaScript
+
+Q: What does HTTP stand for?
+A: HyperText Transfer Protocol
+
+Q: What is the powerhouse of the cell?
+A: Mitochondria
