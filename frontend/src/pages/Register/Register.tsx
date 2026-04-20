@@ -57,7 +57,7 @@ function Register() {
         return;
       }
       const data = await res.json();
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('minddeck_token', data.token);
       navigate('/collections');
     } catch {
       navigate('/');

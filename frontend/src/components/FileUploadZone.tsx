@@ -90,3 +90,4 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: 'none',
   },
 };
+

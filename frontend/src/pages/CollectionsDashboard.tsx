@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import RenameCollection from '../components/RenameCollection';
+import { bearerAuthHeaders } from '../services/apiAuth';
 import { useCurrentUser } from '../pages/useCurrentUser';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -38,13 +39,7 @@ export default function CollectionsDashboard() {
   const [deleteError, setDeleteError] = useState("");
   const [showLogout, setShowLogout] = useState(false);
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    };
-  };
+  const getAuthHeaders = (): HeadersInit => bearerAuthHeaders();
 
   useEffect(() => {
     fetch(`${API_BASE}/api/v1/collections`, {
@@ -171,7 +166,12 @@ export default function CollectionsDashboard() {
       method: 'POST',
       headers: getAuthHeaders(),
     }).catch(() => {});
-    localStorage.removeItem('token');
+    try {
+      localStorage.removeItem('minddeck_token');
+      sessionStorage.removeItem('minddeck_token');
+    } catch {
+      /* ignore */
+    }
     navigate('/');
   };
 

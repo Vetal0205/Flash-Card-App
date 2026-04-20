@@ -1,11 +1,12 @@
 // Srinidhi Sivakaminathan
 // UC6 - Edit Profile Page
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiBase, bearerAuthHeaders } from '../services/apiAuth';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE = apiBase();
 
 const Logo = () => (
   <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -24,15 +25,25 @@ export default function EditProfile() {
   const [errors, setErrors] = useState<{ username?: string; email?: string; currentPassword?: string; newPassword?: string }>({});
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+  const getAuthHeaders = (): HeadersInit => bearerAuthHeaders();
+
+  const closeDeleteModal = useCallback(() => {
+    setShowDeleteConfirm(false);
+    setDeletePassword("");
+    setDeleteError("");
+  }, []);
+
+  useEffect(() => {
+    if (!showDeleteConfirm) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDeleteModal();
     };
-  };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showDeleteConfirm, closeDeleteModal]);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/v1/users/me`, { headers: getAuthHeaders() })
@@ -134,19 +145,42 @@ export default function EditProfile() {
   };
 
   const handleDeleteAccount = async () => {
+    if (!deletePassword.trim()) {
+      setDeleteError("Incomplete Field");
+      return;
+    }
+    setDeleteError("");
     try {
       const res = await fetch(`${API_BASE}/api/v1/users/me`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
+        body: JSON.stringify({ password: deletePassword }),
       });
+      if (res.status === 401) {
+        await res.json().catch(() => ({}));
+        setDeleteError('Incorrect Password');
+        return;
+      }
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = (data as { message?: string; errors?: { msg?: string }[] }).message;
+        const firstErr = (data as { errors?: { msg?: string }[] }).errors?.[0]?.msg;
+        if (firstErr === 'Incomplete Field' || msg === 'Incomplete Field') {
+          setDeleteError('Incomplete Field');
+          return;
+        }
         setDeleteError("Failed to delete account. Please try again.");
         return;
       }
-      localStorage.removeItem('token');
-      navigate('/');
+      try {
+        localStorage.removeItem('minddeck_token');
+        sessionStorage.removeItem('minddeck_token');
+      } catch {
+        /* ignore */
+      }
+      navigate('/register');
     } catch {
-      navigate('/');
+      setDeleteError("Failed to delete account. Please try again.");
     }
   };
 
@@ -155,7 +189,12 @@ export default function EditProfile() {
       method: 'POST',
       headers: getAuthHeaders(),
     }).catch(() => {});
-    localStorage.removeItem('token');
+    try {
+      localStorage.removeItem('minddeck_token');
+      sessionStorage.removeItem('minddeck_token');
+    } catch {
+      /* ignore */
+    }
     navigate('/');
   };
 
@@ -244,19 +283,41 @@ export default function EditProfile() {
           <div style={styles.divider} />
 
           <button style={styles.logoutBtn} onClick={handleLogout}>Log Out</button>
-          <button style={styles.deleteAccountBtn} onClick={() => setShowDeleteConfirm(true)}>Delete Account</button>
+          <button type="button" style={styles.deleteAccountBtn} onClick={() => { setDeletePassword(""); setDeleteError(""); setShowDeleteConfirm(true); }}>Delete Account</button>
         </div>
       </div>
 
       {showDeleteConfirm && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
+        <div
+          role="presentation"
+          style={styles.overlay}
+          onClick={closeDeleteModal}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={styles.modal}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 style={styles.modalTitle}>Delete Account</h3>
             <p style={styles.deleteMsg}>This will permanently delete your account and all your collections. This cannot be undone.</p>
-            {deleteError && <p style={styles.modalError}>{deleteError}</p>}
+            <label style={styles.modalLabel} htmlFor="delete-account-password">CONFIRM PASSWORD</label>
+            <input
+              id="delete-account-password"
+              type="password"
+              autoComplete="current-password"
+              style={{ ...styles.modalInput, borderColor: deleteError ? '#e74c3c' : '#ddd' }}
+              placeholder="Enter your password to confirm"
+              value={deletePassword}
+              onChange={(e) => {
+                setDeletePassword(e.target.value);
+                setDeleteError("");
+              }}
+            />
+            {deleteError ? <p style={styles.modalError}>{deleteError}</p> : null}
             <div style={styles.modalBtns}>
-              <button style={{ ...styles.saveBtn, backgroundColor: '#c0392b' }} onClick={handleDeleteAccount}>Delete Account</button>
-              <button style={styles.cancelBtn} onClick={() => { setShowDeleteConfirm(false); setDeleteError(""); }}>Cancel</button>
+              <button type="button" style={{ ...styles.saveBtn, backgroundColor: '#c0392b' }} onClick={() => { void handleDeleteAccount(); }}>Confirm</button>
+              <button type="button" style={styles.cancelBtn} onClick={closeDeleteModal}>Cancel</button>
             </div>
           </div>
         </div>
@@ -290,6 +351,8 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   modal: { backgroundColor: "#ffffff", padding: "36px", borderRadius: "12px", width: "380px", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" },
   modalTitle: { fontSize: "20px", fontWeight: "bold", color: "#1a1a1a", marginTop: "0", marginBottom: "12px" },
+  modalLabel: { fontSize: "11px", fontWeight: "bold", color: "#888", letterSpacing: "0.8px", fontFamily: "sans-serif", display: "block", marginBottom: "6px", marginTop: "8px" },
+  modalInput: { width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", fontFamily: "sans-serif", boxSizing: "border-box", outline: "none" },
   modalError: { color: "#e74c3c", fontSize: "12px", fontFamily: "sans-serif", margin: "6px 0 0 0" },
   modalBtns: { display: "flex", gap: "12px", marginTop: "24px" },
   deleteMsg: { fontSize: "14px", color: "#555", fontFamily: "sans-serif", lineHeight: "1.6", marginBottom: "8px" },

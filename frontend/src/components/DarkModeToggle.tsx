@@ -15,11 +15,18 @@ export default function DarkModeToggle({
   const accent = 'var(--app-accent, #6b8f71)';
 
   return (
-    <div style={compact ? styles.rowCompact : styles.row} className="dark-mode-toggle">
+    <div
+      style={compact ? styles.rowCompact : styles.row}
+      className="dark-mode-toggle"
+    >
       {showLabel ? (
         <div>
           <p style={{ ...styles.label, fontSize: compact ? 13 : 16 }}>Dark mode</p>
-          {!compact ? <p style={styles.hint}>{dark ? 'Dark theme is on' : 'Dark theme is off'}</p> : null}
+          {!compact ? (
+            <p style={styles.hint}>
+              {dark ? 'Dark theme is on' : 'Dark theme is off'}
+            </p>
+          ) : null}
         </div>
       ) : null}
       <button
@@ -40,7 +47,9 @@ export default function DarkModeToggle({
             ...styles.switchThumb,
             width: compact ? 20 : 22,
             height: compact ? 20 : 22,
-            transform: dark ? `translateX(${compact ? 18 : 22}px)` : 'translateX(0)',
+            transform: dark
+              ? `translateX(${compact ? 18 : 22}px)`
+              : 'translateX(0)',
           }}
         />
       </button>

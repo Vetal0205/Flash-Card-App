@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PauseSession from '../components/PauseSession';
+import { bearerAuthHeaders } from '../services/apiAuth';
 import { useCurrentUser } from '../pages/useCurrentUser';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -40,13 +41,7 @@ export default function StudyMode() {
   const [isComplete, setIsComplete] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    };
-  };
+  const getAuthHeaders = (): HeadersInit => bearerAuthHeaders();
 
   useEffect(() => {
     fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards`, { headers: getAuthHeaders() })
@@ -108,7 +103,12 @@ export default function StudyMode() {
       method: 'POST',
       headers: getAuthHeaders(),
     }).catch(() => {});
-    localStorage.removeItem('token');
+    try {
+      localStorage.removeItem('minddeck_token');
+      sessionStorage.removeItem('minddeck_token');
+    } catch {
+      /* ignore */
+    }
     navigate('/');
   };
 

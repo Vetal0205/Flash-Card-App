@@ -6,7 +6,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import FileUploadZone from '../components/FileUploadZone';
-import { useCurrentUser } from '../pages/useCurrentUser';
+import { bearerAuthHeaders, getMinddeckToken } from '../services/apiAuth';
+import { duplicateFlashcard } from '../services/flashcardApi';
+import { useCurrentUser } from './useCurrentUser';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -54,17 +56,12 @@ export default function FlashcardList() {
   const [importError, setImportError] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<number | null>(null);
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    };
-  };
+  const getAuthHeaders = (): HeadersInit => bearerAuthHeaders();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getMinddeckToken();
     const headers = token ? getAuthHeaders() : { 'Content-Type': 'application/json' };
 
     Promise.all([
@@ -153,6 +150,28 @@ export default function FlashcardList() {
     ));
   };
 
+  const handleDuplicate = async (card: Flashcard) => {
+    if (!collectionId) return;
+    setDuplicatingId(card.flashcardID);
+    try {
+      const copy = await duplicateFlashcard(collectionId, card.flashcardID);
+      setFlashcards((prev) => [
+        ...prev,
+        {
+          flashcardID: copy.flashcardID,
+          collectionID: copy.collectionID,
+          question: copy.question,
+          answer: copy.answer,
+          isFlaggedDifficult: false,
+        },
+      ]);
+    } catch {
+      /* keep list unchanged */
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
   const handleDelete = () => {
     if (!showDeleteConfirm) return;
     fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards/${showDeleteConfirm.flashcardID}`, {
@@ -193,7 +212,12 @@ export default function FlashcardList() {
       method: 'POST',
       headers: getAuthHeaders(),
     }).catch(() => {});
-    localStorage.removeItem('token');
+    try {
+      localStorage.removeItem('minddeck_token');
+      sessionStorage.removeItem('minddeck_token');
+    } catch {
+      /* ignore */
+    }
     navigate('/');
   };
 
@@ -225,10 +249,10 @@ export default function FlashcardList() {
     formData.append('file', file);
     setImporting(true);
     setImportError("");
-    const token = localStorage.getItem('token');
+    const token = getMinddeckToken();
     fetch(`${API_BASE}/api/v1/collections/${collectionId}/import`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     })
       .then(res => {
@@ -260,7 +284,7 @@ export default function FlashcardList() {
     );
   }
 
-  const token = localStorage.getItem('token');
+  const token = getMinddeckToken();
 
   const Navbar = () => (
     <nav style={styles.navbar}>
@@ -379,9 +403,9 @@ export default function FlashcardList() {
           <button style={styles.difficultBtn} onClick={() => navigate('/difficult-flashcards', { state: { collectionId } })}>Study Difficult</button>
           <button style={styles.outlineBtn} onClick={() => setShowImportModal(true)}>⬆ Import</button>
           <button style={styles.outlineBtn} onClick={() => {
-            const token = localStorage.getItem('token');
+            const exportToken = getMinddeckToken();
             fetch(`${API_BASE}/api/v1/collections/${collectionId}/export`, {
-              headers: { 'Authorization': `Bearer ${token}` },
+              headers: exportToken ? { Authorization: `Bearer ${exportToken}` } : {},
             })
               .then(res => res.blob())
               .then(blob => {
@@ -436,8 +460,16 @@ export default function FlashcardList() {
                     </td>
                     <td style={{ ...styles.td, textAlign: 'center' }}>
                       <div style={styles.rowActions}>
-                        <button style={styles.editBtn} onClick={() => openEdit(card)}>Edit</button>
-                        <button style={styles.deleteBtn} onClick={() => setShowDeleteConfirm(card)}>Delete</button>
+                        <button
+                          type="button"
+                          style={styles.duplicateBtn}
+                          disabled={duplicatingId === card.flashcardID}
+                          onClick={() => void handleDuplicate(card)}
+                        >
+                          {duplicatingId === card.flashcardID ? 'Duplicating…' : 'Duplicate'}
+                        </button>
+                        <button type="button" style={styles.editBtn} onClick={() => openEdit(card)}>Edit</button>
+                        <button type="button" style={styles.deleteBtn} onClick={() => setShowDeleteConfirm(card)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -564,7 +596,8 @@ const styles: Record<string, React.CSSProperties> = {
   th: { padding: '12px 16px', fontSize: '12px', fontWeight: 'bold', color: '#888', fontFamily: 'sans-serif', letterSpacing: '0.5px', borderBottom: '1px solid #e0ddd6', backgroundColor: '#fafaf8', textAlign: 'left' },
   td: { padding: '12px 16px', fontSize: '14px', color: '#1a1a1a', fontFamily: 'sans-serif', borderBottom: '1px solid #f0ede8' },
   emptyRow: { padding: '32px', textAlign: 'center', color: '#aaa', fontSize: '14px', fontFamily: 'sans-serif' },
-  rowActions: { display: 'flex', gap: '8px', justifyContent: 'center' },
+  rowActions: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' },
+  duplicateBtn: { background: 'none', border: '1px solid #c8dcc9', borderRadius: '6px', padding: '4px 12px', fontSize: '12px', color: '#4a6b4f', cursor: 'pointer', fontFamily: 'sans-serif' },
   editBtn: { background: 'none', border: '1px solid #ddd', borderRadius: '6px', padding: '4px 12px', fontSize: '12px', color: '#555', cursor: 'pointer', fontFamily: 'sans-serif' },
   deleteBtn: { background: 'none', border: '1px solid #f5c6c6', borderRadius: '6px', padding: '4px 12px', fontSize: '12px', color: '#c0392b', cursor: 'pointer', fontFamily: 'sans-serif' },
   countLabel: { fontSize: '12px', color: '#aaa', fontFamily: 'sans-serif', marginTop: '12px', textAlign: 'right' },
