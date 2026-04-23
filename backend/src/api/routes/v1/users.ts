@@ -38,6 +38,11 @@ router.patch(
 );
 
 // UC-15: DELETE /api/v1/users/me
-router.delete('/me', UserController.deleteAccount.bind(UserController));
+router.delete(
+    '/me',
+    body('password').notEmpty().withMessage('Incomplete Field'),
+    validate,
+    UserController.deleteAccount.bind(UserController)
+);
 
 export default router;

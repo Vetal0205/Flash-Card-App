@@ -88,12 +88,18 @@ class UserService {
         await UserRepository.updateSettings(userID, data);
     }
 
-    async deleteAccount(userID: number): Promise<DeleteAccountResult> {
-        // FR-09: frontend handles confirm/cancel UI; backend executes delete only.
-        const user = await UserRepository.findUserById(userID);
-        if (!user) {
+    async deleteAccount(userID: number, email: string, password: string): Promise<DeleteAccountResult> {
+        // FR-09: require password confirmation before deleting the authenticated account.
+        const fullUser = await UserRepository.findUserByEmail(email);
+        if (!fullUser) {
             throw new AppError('User not found.', 404);
         }
+
+        const passwordMatches = await bcrypt.compare(password, fullUser.passwordHash);
+        if (!passwordMatches) {
+            throw new UnauthorizedError('Incorrect Password');
+        }
+
         await UserRepository.deleteUserById(userID);
 
         return {

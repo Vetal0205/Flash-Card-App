@@ -43,9 +43,11 @@ class UserController {
     async deleteAccount(req: Request, res: Response, next: NextFunction) {
         try {
             const userID = (req as any).userdata?.userID;
+            const email = (req as any).userdata?.email;
+            const { password } = req.body;
 
             // FR-09: frontend confirms action; backend executes deletion.
-            const result = await UserService.deleteAccount(userID);
+            const result = await UserService.deleteAccount(userID, email, password);
             res.status(200).json(result);
         } catch (err) {
             next(err);
