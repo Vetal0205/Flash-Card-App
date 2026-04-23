@@ -13,10 +13,11 @@ interface Props {
  totalCards: number;
  onResume: () => void;
  onDashboard: () => void;
+ errorMessage?: string | null;
 }
 
 
-function PauseSession({ deckName, currentCard, totalCards, onResume, onDashboard }: Props) {
+function PauseSession({ deckName, currentCard, totalCards, onResume, onDashboard, errorMessage }: Props) {
  return (
    <div style={styles.overlay}>
      <div style={styles.modal}>
@@ -24,7 +25,7 @@ function PauseSession({ deckName, currentCard, totalCards, onResume, onDashboard
 
 
        <div style={styles.card}>
-         <p style={styles.savedText}>Your progress has been saved</p>
+         <p style={errorMessage ? styles.errorText : styles.savedText}>{errorMessage || "Your progress has been saved"}</p>
          <p style={styles.detail}>Deck: {deckName}</p>
          <p style={styles.detail}>Progress: {currentCard}/{totalCards} cards</p>
 
@@ -83,6 +84,12 @@ const styles = {
  savedText: {
    fontSize: '16px',
    color: '#333',
+   marginBottom: '10px',
+   fontWeight: 'bold' as const,
+ },
+ errorText: {
+   fontSize: '16px',
+   color: '#e74c3c',
    marginBottom: '10px',
    fontWeight: 'bold' as const,
  },

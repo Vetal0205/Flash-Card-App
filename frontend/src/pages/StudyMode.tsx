@@ -1,6 +1,6 @@
 // Study Mode Page - UC4 (Study/self-grade), UC9 (Pause session - Halema's component)
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PauseSession from '../components/PauseSession';
 import { bearerAuthHeaders } from '../services/apiAuth';
@@ -40,10 +40,36 @@ export default function StudyMode() {
   const [isComplete, setIsComplete] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [pauseError, setPauseError] = useState<string | null>(null);
+  const [responses, setResponses] = useState<Array<{flashcardID: number, responseType: 'known' | 'unknown'}>>([]);
 
   const getAuthHeaders = (): HeadersInit => bearerAuthHeaders();
 
-  const startSession = () => {
+  const saveSessionToLocalStorage = useCallback(() => {
+    const session = { collectionId, currentIndex, totalCards: cards.length };
+    localStorage.setItem(`studySession_${collectionId}`, JSON.stringify(session));
+  }, [collectionId, currentIndex, cards.length]);
+
+  const flushResponses = useCallback(async () => {
+    const promises = responses.map(response =>
+      fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/answers`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ flashcardID: response.flashcardID, responseType: response.responseType }),
+      })
+    );
+    await Promise.all(promises);
+    setResponses([]);
+  }, [responses, collectionId, sessionId]);
+
+  const flushResponsesSync = useCallback(() => {
+    responses.forEach(response => {
+      navigator.sendBeacon(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/answers`, JSON.stringify({ flashcardID: response.flashcardID, responseType: response.responseType }));
+    });
+    setResponses([]);
+  }, [responses, collectionId, sessionId]);
+
+  const startSession = useCallback(() => {
     fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -51,7 +77,58 @@ export default function StudyMode() {
       .then(res => res.json())
       .then(data => { if (data.sessionID) setSessionId(data.sessionID); })
       .catch(() => {});
-  };
+  }, [collectionId]);
+
+  const checkActiveSession = useCallback(() => {
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/active`, {
+      headers: getAuthHeaders(),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.sessionID) {
+          setSessionId(data.sessionID);
+          // Note: currentIndex not restored from backend
+        } else {
+          startSession();
+        }
+      })
+      .catch(() => startSession());
+  }, [collectionId, startSession]);
+
+  const pauseSession = useCallback(() => {
+    if (!sessionId) {
+      setPauseError("No active session found");
+      setIsPaused(true);
+      return;
+    }
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/pause`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    })
+      .then(() => {
+        setPauseError(null);
+        setIsPaused(true);
+      })
+      .catch(() => {
+        setPauseError("Failed to save progress. Please try again.");
+        setIsPaused(true);
+      });
+  }, [collectionId, sessionId]);
+
+  const resumeSession = useCallback(() => {
+    if (!sessionId) return;
+    fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/resume`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    })
+      .then(() => {
+        setPauseError(null);
+        setIsPaused(false);
+      })
+      .catch(() => {
+        setPauseError("Failed to resume session.");
+      });
+  }, [collectionId, sessionId]);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/v1/collections/${collectionId}/flashcards?t=${Date.now()}`, { headers: getAuthHeaders() })
@@ -60,7 +137,13 @@ export default function StudyMode() {
         const shuffled = shuffle(Array.isArray(data) && data.length > 0 ? data : []);
         setCards(shuffled);
         setLoading(false);
-        if (shuffled.length > 0) startSession();
+        const savedSession = localStorage.getItem(`studySession_${collectionId}`);
+        if (savedSession) {
+          const saved = JSON.parse(savedSession);
+          setCurrentIndex(saved.currentIndex);
+          localStorage.removeItem(`studySession_${collectionId}`);
+        }
+        if (shuffled.length > 0) checkActiveSession();
       })
       .catch(() => { setCards([]); setLoading(false); });
 
@@ -71,7 +154,7 @@ export default function StudyMode() {
         if (col) setCollectionName(col.collectionName);
       })
       .catch(() => {});
-  }, [collectionId]);
+  }, [collectionId, checkActiveSession]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -83,39 +166,65 @@ export default function StudyMode() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (responses.length > 0) {
+        flushResponsesSync();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [responses, flushResponsesSync]);
+
   const totalCards = cards.length;
   const currentCard = cards[currentIndex];
   const progress = totalCards > 0 ? Math.round((currentIndex / totalCards) * 100) : 0;
-
+ 
   const recordAnswer = (flashcardID: number, correct: boolean) => {
+  if (!sessionId) return;
+  fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/answers`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ flashcardID, responseType: correct ? 'known' : 'unknown' }),
+  }).catch(() => {});
+};
+ 
+  const completeSession = useCallback(async () => {
     if (!sessionId) return;
-    fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/answers`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ flashcardID, responseType: correct ? 'known' : 'unknown' }),
-    }).catch(() => {});
-  };
-
-  const completeSession = () => {
-    if (!sessionId) return;
+    await flushResponses();
     fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/complete`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
     }).catch(() => {});
-  };
+  }, [sessionId, flushResponses, collectionId]);
 
   const advance = (correct: boolean) => {
-    recordAnswer(currentCard.flashcardID, correct);
     if (currentIndex + 1 >= totalCards) { completeSession(); setIsComplete(true); }
     else { setCurrentIndex(currentIndex + 1); setIsFlipped(false); }
   };
 
-  const handleKnown = () => { setKnown(known + 1); advance(true); };
-  const handleUnknown = () => { setUnknown(unknown + 1); advance(false); };
+  const handleKnown = () => {
+ 
+    recordAnswer(currentCard.flashcardID, true);
+ 
+    setResponses(prev => [...prev, { flashcardID: currentCard.flashcardID, responseType: 'known' }]);
+    setKnown(known + 1);
+    advance(true);
+  };
+  const handleUnknown = () => {
+   
+    recordAnswer(currentCard.flashcardID, false);
+ 
+    setResponses(prev => [...prev, { flashcardID: currentCard.flashcardID, responseType: 'unknown' }]);
+    setUnknown(unknown + 1);
+    advance(false);
+  };
 
   const handleRestart = () => {
     setCurrentIndex(0); setIsFlipped(false); setKnown(0);
     setUnknown(0); setIsComplete(false); setSessionId(null);
+    setResponses([]);
+    localStorage.removeItem(`studySession_${collectionId}`);
     startSession();
   };
 
@@ -142,7 +251,7 @@ export default function StudyMode() {
       <nav style={styles.navbar}>
         <div style={styles.navBrand}><Logo /><span style={styles.navTitle}>MindDeck</span></div>
         <div style={styles.navRight}>
-          <button style={styles.pauseBtn} onClick={() => setIsPaused(true)}>⏸ Pause</button>
+          <button style={styles.pauseBtn} onClick={pauseSession}>⏸ Pause</button>
           <button style={styles.exitBtn} onClick={() => navigate(`/collections/${collectionId}`)}>Exit Study</button>
           <div ref={dropdownRef} style={{ position: 'relative' }}>
             <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 {username}</button>
@@ -185,7 +294,7 @@ export default function StudyMode() {
         )}
       </div>
 
-      {isPaused && <PauseSession deckName={collectionName} currentCard={currentIndex + 1} totalCards={totalCards} onResume={() => setIsPaused(false)} onDashboard={() => navigate('/collections')} />}
+      {isPaused && <PauseSession deckName={collectionName} currentCard={currentIndex + 1} totalCards={totalCards} onResume={resumeSession} onDashboard={async () => { await flushResponses(); saveSessionToLocalStorage(); navigate('/collections'); }} errorMessage={pauseError} />}
 
       {isComplete && (
         <div style={styles.overlay}>
