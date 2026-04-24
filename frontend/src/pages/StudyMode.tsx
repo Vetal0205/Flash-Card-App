@@ -1,4 +1,5 @@
-// Study Mode Page - UC4 (Study/self-grade), UC9 (Pause session -  component)
+// Study Mode Page - UC4 (Study/self-grade), 
+// Used by UC9 Pause session - Halema
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -172,16 +173,14 @@ export default function StudyMode() {
             `${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${activeSession.sessionID}/complete`,
             { method: 'PATCH', headers: getAuthHeaders() }
           );
-        } catch { /* best-effort; POST will still create a new session */ }
+        } catch { /* POST will still create a new session */ }
         activeSession = null;
       }
 
       if (cancelled) return;
 
-      // 3 — two separate paths:
-      //   RESUME  (activeSession != null): POST returns the existing session and its stored
-      //           cardOrder without creating a new session.
-      //   NEW     (activeSession == null): POST creates a fresh session beginning at index 0.
+      // 3 — two paths
+      //   Resume session at 0 
       let sessionPayload: any = null;
       try {
         const startRes = await fetch(
@@ -193,9 +192,8 @@ export default function StudyMode() {
 
       if (cancelled) return;
 
-      // 3.5 — for a resumed session, fetch the summary to restore known/unknown counts.
-      //       The StudySession model has no known/unknown fields; they are computed from
-      //       the individual answer rows via the summary endpoint.
+      // 3.5 — for a resumed session, fetch the summary to restore counts.
+   
       let resumedKnown = 0;
       let resumedUnknown = 0;
       if (activeSession !== null) {
@@ -225,13 +223,11 @@ export default function StudyMode() {
       }
 
       // 5 — resolve session identity.
-      //     RESUME path: prefer POST response; fall back to GET /active data if POST failed.
-      //     NEW path:    activeSession is null, so all data must come from POST.
+  
       const sessionSource = sessionPayload?.session ?? activeSession;
 
       // 6 — clamp the restored index to a valid position.
-      //     If the server index equals orderedCards.length, all cards were already answered
-      //     in a previous run — jump straight to the complete screen instead of crashing.
+
       const serverIndex: number = sessionSource?.currentIndex ?? 0;
       const alreadyFinished = serverIndex >= orderedCards.length && orderedCards.length > 0;
       const safeIndex = alreadyFinished
