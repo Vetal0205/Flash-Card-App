@@ -36,10 +36,6 @@ function Login() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (isAccountLocked()) {
-      setErrors({ general: LOCKOUT_MESSAGE });
-      return;
-    }
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);

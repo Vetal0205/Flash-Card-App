@@ -392,7 +392,23 @@ export default function StudyMode() {
        <div style={styles.navBrand}><Logo /><span style={styles.navTitle}>MindDeck</span></div>
        <div style={styles.navRight}>
          <button style={styles.pauseBtn} onClick={pauseSession}>⏸ Pause</button>
-         <button style={styles.exitBtn} onClick={() => navigate(`/collections/${collectionId}`)}>Exit Study</button>
+         <button style={styles.exitBtn} onClick={async () => {
+  if (sessionId) {
+    const remaining = cards.slice(currentIndex);
+    await Promise.all(remaining.map(card =>
+      fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/answers`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ flashcardID: card.flashcardID, responseType: 'skipped' }),
+      }).catch(() => {})
+    ));
+    await fetch(`${API_BASE}/api/v1/collections/${collectionId}/study-sessions/${sessionId}/complete`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    }).catch(() => {});
+  }
+  navigate(`/collections/${collectionId}`);
+}}>Exit Study</button>
          <div ref={dropdownRef} style={{ position: 'relative' }}>
            <button style={styles.profileBtn} onClick={() => setShowProfileMenu(!showProfileMenu)}>👤 {username}</button>
            {showProfileMenu && (

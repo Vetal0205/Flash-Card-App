@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login/Login';
 import Register from './pages/Register/Register';
 import MockPage from './pages/MockPage';
@@ -19,7 +19,14 @@ function AppRoutes() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            localStorage.getItem('minddeck_token')
+              ? <Navigate to="/collections" replace />
+              : <Login />
+          }
+        />
         <Route path="/register" element={<Register />} />
         <Route path="/mock" element={<MockPage />} />
         <Route path="/share/:collectionId" element={<PublicSharedCollection />} />
